@@ -35,15 +35,8 @@ fun KpIndexScreen(
     val lastUpdatedRaw by vm.lastUpdated.observeAsState("Never")
 
     val cardShape = RoundedCornerShape(14.dp)
-    val dateFormatter = remember { SimpleDateFormat("MMM d, HH:mm 'UTC'", Locale.getDefault()) }
 
-    val lastUpdated = remember(lastUpdatedRaw) {
-        if (lastUpdatedRaw == "Never") "Never"
-        else runCatching {
-            val parsed = dateFormatter.parse(lastUpdatedRaw)
-            if (parsed != null) dateFormatter.format(parsed) else lastUpdatedRaw
-        }.getOrElse { lastUpdatedRaw }
-    }
+    val lastUpdated = lastUpdatedRaw
 
     Scaffold(
         topBar = {
@@ -242,7 +235,7 @@ fun KpIndexScreen(
                             ) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(
-                                        text = vm.formatKpValue(kp),
+                                        text = vm.formatKpValue(reading.estimatedKp),
                                         color = colorItem,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 18.sp

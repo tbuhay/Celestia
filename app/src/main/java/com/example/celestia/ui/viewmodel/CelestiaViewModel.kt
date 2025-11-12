@@ -27,10 +27,9 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
         _lastUpdated.value = prefs.getString("last_updated", "Never")
     }
 
-    /** Utility for UTC time */
-    private fun currentUtcTime(): String {
-        val sdf = SimpleDateFormat("MMM d, HH:mm 'UTC'", Locale.US)
-        sdf.timeZone = TimeZone.getTimeZone("UTC")
+    private fun currentLocalTime(): String {
+        val sdf = SimpleDateFormat("MMM d, HH:mm", Locale.US)
+        sdf.timeZone = TimeZone.getDefault()
         return sdf.format(Date())
     }
 
@@ -59,7 +58,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                 }
 
                 // --- Shared timestamp (applied last) ---
-                val formattedTime = currentUtcTime()
+                val formattedTime = currentLocalTime()
                 prefs.edit().putString("last_updated", formattedTime).apply()
                 _lastUpdated.postValue(formattedTime)
 
@@ -84,13 +83,24 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     /** NOAA formatting helpers */
     fun formatKpTimestamp(utcString: String): String {
         return try {
-            val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
-            parser.timeZone = TimeZone.getTimeZone("UTC")
-            val date = parser.parse(utcString)
-            val formatter = SimpleDateFormat("MMM dd, HH:mm 'UTC'", Locale.US)
-            formatter.timeZone = TimeZone.getTimeZone("UTC")
+            // NOAA sometimes omits 'Z' — handle both cases safely
+            val cleaned = utcString.trim()
+
+            val parser = if (cleaned.endsWith("Z")) {
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+            } else {
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+            }
+
+            parser.timeZone = TimeZone.getTimeZone("UTC") // always parse as UTC
+
+            val date = parser.parse(cleaned)
+
+            val formatter = SimpleDateFormat("MMM dd, HH:mm", Locale.US)
+            formatter.timeZone = TimeZone.getDefault() // convert to device local (Winnipeg)
             formatter.format(date!!)
         } catch (e: Exception) {
+            // fallback — just return original UTC string
             utcString
         }
     }

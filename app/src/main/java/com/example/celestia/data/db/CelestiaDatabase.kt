@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.example.celestia.data.model.KpReading
 import com.example.celestia.data.model.IssReading
 
-@Database(entities = [KpReading::class, IssReading::class], version = 3, exportSchema = false)
+@Database(entities = [KpReading::class, IssReading::class], version = 4, exportSchema = false)
 abstract class CelestiaDatabase : RoomDatabase() {
 
     abstract fun dao(): CelestiaDao
