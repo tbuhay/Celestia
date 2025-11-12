@@ -108,4 +108,36 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     fun formatKpValue(kp: Double, decimals: Int = 2): String {
         return String.format(Locale.US, "%.${decimals}f", kp)
     }
+
+    fun groupKpReadingsHourly(readings: List<com.example.celestia.data.model.KpReading>): List<Triple<Date, Float, Float>> {
+        if (readings.isEmpty()) return emptyList()
+
+        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+
+        // Group by truncated-to-hour timestamps
+        val grouped = readings.mapNotNull { r ->
+            try {
+                val date = parser.parse(r.timestamp)
+                if (date != null) Pair(date, r.estimatedKp.toFloat()) else null
+            } catch (_: Exception) {
+                null
+            }
+        }.groupBy { (date, _) ->
+            val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { time = date }
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.time
+        }
+
+        // Compute average per hour group
+        return grouped.entries.sortedByDescending { it.key }.map { (hourStart, values) ->
+            val list = values.map { it.second }
+            val avg = list.average().toFloat()
+            val high = list.maxOrNull() ?: avg
+            val low = list.minOrNull() ?: avg
+            Triple(hourStart, avg, high.coerceAtLeast(low))
+        }
+    }
 }

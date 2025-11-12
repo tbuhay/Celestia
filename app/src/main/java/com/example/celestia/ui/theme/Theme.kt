@@ -18,7 +18,7 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = TextPrimary
 )
 
-private val LightColorScheme = lightColorScheme( // we’ll tune this later
+private val LightColorScheme = lightColorScheme(
     primary = CelestiaBlue,
     background = Color(0xFFF7F8FB),
     surface = Color.White,
@@ -28,7 +28,7 @@ private val LightColorScheme = lightColorScheme( // we’ll tune this later
 
 @Composable
 fun CelestiaTheme(
-    darkTheme: Boolean = true,  // force dark for now
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
     MaterialTheme(

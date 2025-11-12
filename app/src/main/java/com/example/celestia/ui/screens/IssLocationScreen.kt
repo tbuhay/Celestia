@@ -3,8 +3,10 @@ package com.example.celestia.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocationOn
@@ -21,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.google.android.gms.maps.model.CameraPosition
@@ -37,6 +40,8 @@ fun IssLocationScreen(
 ) {
     val issReading by vm.issReading.observeAsState()
     val cardShape = RoundedCornerShape(14.dp)
+
+    val scroll = rememberScrollState()
 
     Scaffold(
         topBar = {
@@ -60,7 +65,8 @@ fun IssLocationScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(scroll),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
@@ -71,7 +77,7 @@ fun IssLocationScreen(
                     .border(1.dp, Color(0x33FFFFFF), cardShape),
                 shape = cardShape,
                 colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha=0.2f)
                 ),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
             ) {
@@ -98,7 +104,7 @@ fun IssLocationScreen(
                             Icon(
                                 imageVector = Icons.Default.Public,
                                 contentDescription = "ISS",
-                                tint = Color.White
+                                tint = Color(0xFFB39DDB)
                             )
                         }
                         Spacer(Modifier.width(12.dp))
@@ -211,14 +217,38 @@ fun IssLocationScreen(
                 )
             ) {
                 Column(
-                    Modifier.padding(16.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                )  {
                     Text(
-                        "ISS Specifications",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        "About the ISS",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(Modifier.width(10.dp))
+
+                    Text(
+                        text = "The International Space Station is a modular space station in low Earth orbit. " +
+                                "It serves as a microgravity and space environment research laboratory where scientific " +
+                                "research is conducted in astrobiology, astronomy, meteorology, physics, and other fields.",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 17.sp,
+                            lineHeight = 22.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Start
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 2.dp)
+                    )
+
+                    Spacer(Modifier.width(10.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -275,7 +305,11 @@ fun IssLocationScreen(
 @Composable
 private fun StatRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = Color(0xFFB39DDB) // lighter purple
+        )
         Spacer(Modifier.width(12.dp))
         Column {
             Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)

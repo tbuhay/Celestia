@@ -117,7 +117,7 @@ fun KpIndexScreen(
                             Text(
                                 "Current Kp Index: " + vm.formatKpValue(kp, decimals = 0),
                                 style = MaterialTheme.typography.titleMedium.copy(
-                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    color = Color(0xFF2B8AD2),
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -136,20 +136,23 @@ fun KpIndexScreen(
                                     else -> "Calm conditions, no aurora expected."
                                 },
                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                                    fontSize = 16.sp
                                 )
                             )
                             Text(
-                                "High: ${readings.maxOfOrNull { it.kpIndex } ?: kp}  |  Low: ${readings.minOfOrNull { it.kpIndex } ?: kp}",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                )
+                                text = "High: ${readings.maxOfOrNull { it.kpIndex } ?: kp}  |  Low: ${readings.minOfOrNull { it.kpIndex } ?: kp}",
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                fontSize = 14.sp,  // increased
+                                lineHeight = 18.sp,
+                                textAlign = TextAlign.Start
                             )
                             Text(
-                                "Last updated: $lastUpdated",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
+                                text = "Last updated: $lastUpdated",
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                fontSize = 14.sp,  // increased
+                                lineHeight = 18.sp,
+                                textAlign = TextAlign.Start
                             )
 
                             if (lastUpdated == "Never") {
@@ -171,16 +174,31 @@ fun KpIndexScreen(
                         }
                     }
                 }
+                // ---------- Kp Scale Text ----------
+                item {
+                    Text(
+                        text = "Kp Scale: 0–2 Quiet  |  3–4 Active  |  5–6 Storm  |  7–9 Severe Storm",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            letterSpacing = 0.2.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+                }
 
                 // ---------- Explanation ----------
                 item {
                     ElevatedCard(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, Color(0x22FFFFFF), cardShape),
+                            .fillMaxWidth(),
                         shape = cardShape,
                         colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
                         )
                     ) {
                         Text(
@@ -209,16 +227,20 @@ fun KpIndexScreen(
                     )
                 }
 
-                items(readings.take(10)) { reading ->
+                val grouped = vm.groupKpReadingsHourly(readings)
+
+                items(grouped.take(12)) { (hour, avg, high) ->
                     val colorItem = when {
-                        reading.kpIndex >= 7 -> Color(0xFFD32F2F)
-                        reading.kpIndex >= 5 -> Color(0xFFF57C00)
-                        reading.kpIndex >= 3 -> Color(0xFFFFEB3B)
+                        avg >= 7 -> Color(0xFFD32F2F)
+                        avg >= 5 -> Color(0xFFF57C00)
+                        avg >= 3 -> Color(0xFFFFEB3B)
                         else -> Color(0xFF4CAF50)
                     }
 
                     ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, Color(0x33FFFFFF), cardShape),
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surface
                         ),
@@ -230,32 +252,53 @@ fun KpIndexScreen(
                                 .padding(12.dp)
                         ) {
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
                                     Text(
-                                        text = vm.formatKpValue(reading.estimatedKp),
+                                        text = vm.formatKpValue(avg.toDouble(), 2),
                                         color = colorItem,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 18.sp
+                                        fontSize = 22.sp
                                     )
                                     Text(
                                         text = when {
-                                            reading.kpIndex >= 7 -> "Severe Storm"
-                                            reading.kpIndex >= 5 -> "Storm"
-                                            reading.kpIndex >= 3 -> "Active"
+                                            avg >= 7 -> "Severe Storm"
+                                            avg >= 5 -> "Storm"
+                                            avg >= 3 -> "Active"
                                             else -> "Quiet"
                                         },
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 17.sp,
+                                        modifier = Modifier.padding(top = 2.dp) // <-- optical alignment fix
                                     )
                                 }
+
+                                // Right side: Date and time (aligned right)
                                 Text(
-                                    text = " " + vm.formatKpTimestamp(reading.timestamp),
+                                    text = vm.formatKpTimestamp(
+                                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+                                            .apply { timeZone = TimeZone.getTimeZone("UTC") }
+                                            .format(hour)
+                                    ),
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                    fontSize = 13.sp
+                                    fontSize = 13.sp,
+                                    textAlign = TextAlign.End,
+                                    modifier = Modifier.widthIn(min = 80.dp)
                                 )
                             }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "High: ${"%.1f".format(high)} | Low: ${"%.1f".format(avg)}",
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
