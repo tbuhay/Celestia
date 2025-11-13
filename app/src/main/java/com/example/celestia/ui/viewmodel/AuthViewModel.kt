@@ -43,16 +43,23 @@ class AuthViewModel : ViewModel() {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
+
                     val user = auth.currentUser
-                    user?.updateProfile(
-                        com.google.firebase.auth.UserProfileChangeRequest.Builder()
-                            .setDisplayName(name)
-                            .build()
-                    )?.addOnCompleteListener {
-                        _userName.value = name
+                    val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                        .setDisplayName(name)
+                        .build()
+
+                    user?.updateProfile(profileUpdates)?.addOnCompleteListener {
+
+                        user.reload().addOnCompleteListener {
+
+                            _userName.value = user.displayName ?: name
+
+                            _isAuthenticated.value = true
+                            Log.d("AuthVM", "Registration success + displayName refreshed")
+                        }
                     }
-                    _isAuthenticated.value = true
-                    Log.d("AuthVM", "Registration success")
+
                 } else {
                     _errorMessage.value =
                         task.exception?.message ?: "Registration failed. Try again later."

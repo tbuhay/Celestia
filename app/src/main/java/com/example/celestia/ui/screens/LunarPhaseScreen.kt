@@ -1,6 +1,5 @@
 package com.example.celestia.ui.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,9 +17,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,77 +42,18 @@ fun CelestiaPhaseCard(
             .fillMaxWidth()
             .border(
                 width = 1.dp,
-                color = Color(0xFF3A3F5F),   // subtle gray-blue border
+                color = Color(0xFF3A3F5F),
                 shape = RoundedCornerShape(20.dp)
             ),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = Color(0xFF1A1E33) // deep navy blue
+            containerColor = Color(0xFF1A1E33)
         )
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
             content = content
         )
-    }
-}
-
-
-// -----------------------------------------------------------------------------
-//  Dynamic Moon Phase (temporary until static images added)
-// -----------------------------------------------------------------------------
-@Composable
-fun DynamicMoonPhase(
-    illuminationPercent: Double,
-    isWaxing: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val illumination = (illuminationPercent / 100.0)
-        .coerceIn(0.0, 1.0)
-        .toFloat()
-
-    Box(
-        modifier = modifier
-            .size(180.dp)
-            .clip(CircleShape)
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_full_moon_static),
-            contentDescription = null,
-            modifier = Modifier.matchParentSize()
-        )
-
-        Canvas(modifier = Modifier.matchParentSize()) {
-
-            val r = size.width / 2f
-            val center = Offset(r, r)
-            val direction = if (isWaxing) 1 else -1
-
-            // Quarter phases → straight shadow
-            if (illumination in 0.45f..0.55f) {
-                val half = size.width / 2f
-                val quarterShadowX = if (isWaxing) 0f else half
-
-                drawRect(
-                    color = Color.Black,
-                    topLeft = Offset(quarterShadowX, 0f),
-                    size = Size(half, size.height)
-                )
-            }
-            // All other phases → circular shadow
-            else {
-                val shadowOffset = (1f - illumination) * r
-                drawCircle(
-                    color = Color.Black,
-                    radius = r,
-                    center = Offset(
-                        x = center.x + shadowOffset * direction,
-                        y = center.y
-                    ),
-                    blendMode = BlendMode.SrcOver
-                )
-            }
-        }
     }
 }
 
@@ -146,14 +83,15 @@ fun LunarPhaseScreen(
     val waxing = vm.isWaxing(lunarPhase?.moonPhase)
     val ageDays = vm.computeMoonAgeDays(lunarPhase)
     val distanceKm = lunarPhase?.moonDistance
+
     val updatedText = lunarPhase?.let {
         vm.formatLunarTimestamp(it.date, it.currentTime)
     } ?: "Just now"
 
+    // FIXED: define moon icon ONCE and use everywhere
+    val moonIconRes = vm.getMoonPhaseIconRes(lunarPhase?.moonPhase)
 
-    // -----------------------
-    // UI
-    // -----------------------
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -187,11 +125,7 @@ fun LunarPhaseScreen(
             // Loading / Error
             // -----------------------
             when {
-                isLoading -> Text(
-                    "Loading current lunar data...",
-                    color = Color.Gray
-                )
-
+                isLoading -> Text("Loading current lunar data...", color = Color.Gray)
                 errorMessage != null -> Text(
                     errorMessage ?: "Error loading lunar data",
                     color = MaterialTheme.colorScheme.error
@@ -209,22 +143,11 @@ fun LunarPhaseScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
 
-                    Box(
-                        modifier = Modifier
-                            .size(60.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF444B6E)),
-                        contentAlignment = Alignment.Center
-                    ) { Text("🌕") }
-
-
-                    if (lunarPhase != null) {
-                        DynamicMoonPhase(
-                            illuminationPercent = illumination,
-                            isWaxing = waxing,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        )
-                    }
+                    Image(
+                        painter = painterResource(id = moonIconRes),
+                        contentDescription = "Moon phase icon",
+                        modifier = Modifier.size(120.dp)
+                    )
 
                     Text(
                         text = phaseName,
@@ -232,13 +155,9 @@ fun LunarPhaseScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    Text(
-                        text = "Current Lunar Phase",
-                        color = Color.Gray
-                    )
+                    Text("Current Lunar Phase", color = Color.Gray)
                 }
             }
-
 
             // -----------------------
             // CURRENT DETAILS CARD
@@ -264,7 +183,7 @@ fun LunarPhaseScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // --- Row 1 ---
+                // Row 1
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -288,7 +207,7 @@ fun LunarPhaseScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // --- Row 2 ---
+                // Row 2
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -296,7 +215,7 @@ fun LunarPhaseScreen(
                     Column {
                         Text("Distance", color = Color.Gray)
                         Text(
-                            text = distanceKm?.let { String.format("%,.0f km", it) } ?: "N/A",
+                            distanceKm?.let { String.format("%,.0f km", it) } ?: "N/A",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
                     }
@@ -316,11 +235,15 @@ fun LunarPhaseScreen(
             // TODAY'S SCHEDULE CARD
             // -----------------------
             CelestiaPhaseCard {
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.CalendarMonth, contentDescription = null)
+                    Icon(
+                        Icons.Default.CalendarMonth,
+                        contentDescription = null
+                    )
                     Text(
                         "Today’s Schedule",
                         style = MaterialTheme.typography.titleMedium,

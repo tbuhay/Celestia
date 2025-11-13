@@ -193,14 +193,28 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun getMoonPhaseIconRes(phase: String?): Int {
+        return when (phase?.uppercase(Locale.US)) {
+
+            "NEW_MOON"        -> R.drawable.new_moon
+            "WAXING_CRESCENT" -> R.drawable.waxing_crescent_moon
+            "FIRST_QUARTER"   -> R.drawable.first_quarter_moon
+            "WAXING_GIBBOUS"  -> R.drawable.waxing_gibbous_moon
+            "FULL_MOON"       -> R.drawable.full_moon
+            "WANING_GIBBOUS"  -> R.drawable.waning_gibbous_moon
+            "LAST_QUARTER"    -> R.drawable.last_quarter_moon
+            "WANING_CRESCENT" -> R.drawable.waning_crescent_moon
+
+            else              -> R.drawable.full_moon  // safe fallback
+        }
+    }
+
     fun isWaxing(phase: String?): Boolean {
         return when (phase?.uppercase()) {
             "WAXING_CRESCENT",
             "FIRST_QUARTER",
             "WAXING_GIBBOUS" -> true
-
             "FULL_MOON" -> true     // peak light
-
             "WANING_GIBBOUS",
             "LAST_QUARTER",
             "WANING_CRESCENT",

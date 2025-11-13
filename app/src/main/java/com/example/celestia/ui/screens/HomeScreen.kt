@@ -117,7 +117,7 @@ fun HomeScreen(
 
                 // ---------- KP Index ----------
                 CelestiaCard(
-                    iconRes = R.drawable.ic_beat,
+                    iconRes = R.drawable.ic_kp_beat,
                     iconTint = CelestiaSkyBlue,
                     title = "KP Index",
                     mainRow = {
