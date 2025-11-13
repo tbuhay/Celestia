@@ -9,11 +9,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.celestia.ui.screens.AsteroidTrackingScreen
+import com.example.celestia.ui.screens.LunarPhaseScreen
 import com.example.celestia.ui.screens.HomeScreen
 import com.example.celestia.ui.screens.IssLocationScreen
 import com.example.celestia.ui.screens.KpIndexScreen
 import com.example.celestia.ui.screens.LoginScreen
 import com.example.celestia.ui.screens.RegisterScreen
+import com.example.celestia.ui.screens.SettingsScreen
 import com.example.celestia.ui.theme.CelestiaTheme
 import com.google.firebase.FirebaseApp
 
@@ -31,15 +33,19 @@ class MainActivity : ComponentActivity() {
                     navController = navController,
                     startDestination = if (isUserLoggedIn) "home" else "login"
                 ) {
-                    // 🔹 Auth Screens
+                    // Auth Screens
                     composable("login") { LoginScreen(navController) }
                     composable("register") { RegisterScreen(navController) }
 
-                    // 🔹 Main App Screens
+                    // Main App Screens
                     composable("home") { HomeScreen(navController, viewModel()) }
                     composable("kp_index") { KpIndexScreen(navController, viewModel()) }
                     composable("iss_location") { IssLocationScreen(navController, viewModel()) }
                     composable("asteroid_tracking") { AsteroidTrackingScreen(navController) }
+                    composable("lunar_phase") { LunarPhaseScreen(navController) }
+
+                    // Settings Screen(s)
+                    composable("settings") { SettingsScreen(navController) }
                 }
             }
         }

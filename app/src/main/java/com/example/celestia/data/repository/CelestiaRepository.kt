@@ -1,6 +1,7 @@
 package com.example.celestia.data.repository
 
 import android.util.Log
+import com.example.celestia.BuildConfig
 import com.example.celestia.data.db.CelestiaDao
 import com.example.celestia.data.model.IssReading
 import com.example.celestia.data.model.KpReading
@@ -8,6 +9,7 @@ import com.example.celestia.data.network.RetrofitInstance
 import kotlinx.coroutines.flow.Flow
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.celestia.data.model.LunarPhase
 
 class CelestiaRepository(private val dao: CelestiaDao) {
 
@@ -51,17 +53,14 @@ class CelestiaRepository(private val dao: CelestiaDao) {
         }
     }
 
-    // --- MOON (Lunar Phase) ---
-//    suspend fun getLunarPhase(): v
-//    LunarPhase? {
-//        return try {
-//            val today = LocalDate.now().toString() // "2025-11-12"
-//            val lunarData = RetrofitInstance.moonApi.getLunarData(today)
-//            Log.d("CelestiaRepo", "Fetched Lunar data: ${lunarData.phase_name}")
-//            lunarData
-//        } catch (e: Exception) {
-//            Log.e("CelestiaRepo", "Error fetching Lunar data", e)
-//            null
-//        }
-//    }
+    suspend fun fetchLunarPhase(
+        latitude: Double,
+        longitude: Double
+    ): LunarPhase {
+        return RetrofitInstance.lunarApi.getLunarPhase(
+            apiKey = BuildConfig.IPGEO_API_KEY,
+            latitude = latitude,
+            longitude = longitude
+        )
+    }
 }

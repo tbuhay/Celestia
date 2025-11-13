@@ -15,3 +15,5 @@ val TextPrimary = Color(0xFFE6E9F0)      // Main text (off-white)
 val TextSecondary = Color(0xFF8FA1C4)    // Muted secondary text
 
 val CelestiaSkyBlue = Color(0xFF1E88E5)
+
+val CelestiaYellow = Color(0xFFDCB30C)

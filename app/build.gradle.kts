@@ -17,8 +17,15 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        buildConfigField(
+            "String",
+            "IPGEO_API_KEY",
+            "\"5dc8e0b10425455d8336e196019de244\""
+        )
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
 
     buildTypes {
         release {
@@ -37,6 +44,7 @@ android {
         jvmTarget = "11"
     }
     buildFeatures {
+        buildConfig = true
         compose = true
     }
 }
@@ -52,6 +60,7 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
+    implementation(libs.androidx.compose.ui.geometry)
     ksp(libs.androidx.room.compiler)
     implementation(libs.gson)
     implementation(libs.retrofit)
@@ -69,6 +78,8 @@ dependencies {
 
     implementation(libs.firebase.auth.ktx)
     implementation(libs.play.services.auth)
+
+    implementation(libs.coil.compose)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
