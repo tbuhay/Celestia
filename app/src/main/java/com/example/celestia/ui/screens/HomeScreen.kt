@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.celestia.utils.TimeUtils
+import com.example.celestia.utils.FormatUtils
 import com.example.celestia.R
 import com.example.celestia.ui.theme.*
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
@@ -122,7 +124,7 @@ fun HomeScreen(
                     title = "KP Index",
                     mainRow = {
                         Text(
-                            text = vm.formatKpValue(kp),
+                            text = kp.toString(),
                             modifier = Modifier.alignByBaseline(),
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontSize = 26.sp,
@@ -166,7 +168,7 @@ fun HomeScreen(
                         )
                         Text(
                             text = issReading?.let {
-                                "${formatCoord(it.latitude, 'N', 'S')}, ${formatCoord(it.longitude, 'E', 'W')}"
+                                FormatUtils.formatCoordinates(it.latitude, it.longitude)
                             } ?: "--° N, --° W",
                             modifier = Modifier.alignByBaseline(),
                             style = MaterialTheme.typography.titleMedium.copy(
@@ -177,7 +179,7 @@ fun HomeScreen(
                         )
                     },
                     description = issReading?.let {
-                        "Altitude: ${formatNumber(it.altitude)} km | Velocity: ${formatNumber(it.velocity)} km/h"
+                        "Altitude: ${FormatUtils.formatAltitude(it.altitude)} | Velocity: ${FormatUtils.formatVelocity(it.velocity)}"
                     } ?: "Altitude: -- km | Velocity: -- km/h",
                     shape = cardShape,
                     onClick = { navController.navigate("iss_location") }
@@ -243,7 +245,7 @@ fun HomeScreen(
                     },
 
                     description = if (lunarPhase != null)
-                        "Illumination: ${String.format("%.1f", illumination)}% | Age: ${String.format("%.1f", moonAge)} days"
+                        "Illumination: ${FormatUtils.formatPercent(illumination ?: 0.0)} | Age: ${FormatUtils.formatMoonAge(moonAge ?: 0.0)}"
                     else
                         "Loading lunar data...",
 

@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.celestia.utils.FormatUtils
+import com.example.celestia.utils.TimeUtils
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -127,21 +129,19 @@ fun IssLocationScreen(
                         StatRow(
                             icon = Icons.Default.LocationOn,
                             label = "Coordinates",
-                            value = "${formatCoord(issReading!!.latitude, 'N', 'S')}, " +
-                                    "${formatCoord(issReading!!.longitude, 'E', 'W')}"
+                            value = FormatUtils.formatCoordinates(issReading!!.latitude, issReading!!.longitude)
                         )
                         StatRow(
                             icon = Icons.Default.Public,
                             label = "Altitude",
-                            value = "${formatNumber(issReading!!.altitude)} km"
+                            value = FormatUtils.formatAltitude(issReading!!.altitude)
                         )
                         StatRow(
                             icon = Icons.Default.Speed,
                             label = "Velocity",
-                            value = "${formatNumber(issReading!!.velocity)} km/h"
+                            value = FormatUtils.formatVelocity(issReading!!.velocity)
                         )
-                        Text(
-                            "Updated: ${issReading!!.timestamp}",
+                        Text("Updated: ${issReading!!.timestamp}",
                             color = Color.LightGray,
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -181,8 +181,7 @@ fun IssLocationScreen(
                             Marker(
                                 state = MarkerState(position = issPosition),
                                 title = "ISS",
-                                snippet = "Lat: ${"%.2f".format(issReading!!.latitude)}, " +
-                                        "Lon: ${"%.2f".format(issReading!!.longitude)}"
+                                snippet = FormatUtils.formatCoordinates(issReading!!.latitude, issReading!!.longitude)
                             )
                         }
                     }
@@ -316,18 +315,4 @@ private fun StatRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label
             Text(value, style = MaterialTheme.typography.bodyLarge)
         }
     }
-}
-
-fun formatCoord(deg: Double, pos: Char, neg: Char): String {
-    val hemi = if (deg >= 0) pos else neg
-    val absDeg = abs(deg)
-    return "${"%.4f".format(absDeg)}° $hemi"
-}
-
-fun formatNumber(n: Double): String {
-    val rounded = if ((n * 10).roundToInt() % 10 == 0) n.toInt().toString() else "%.1f".format(n)
-    val parts = rounded.split(".")
-    val intPart = parts[0]
-    val withCommas = intPart.reversed().chunked(3).joinToString(",").reversed()
-    return if (parts.size == 2) "$withCommas.${parts[1]}" else withCommas
 }

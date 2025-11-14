@@ -5,15 +5,16 @@ import com.example.celestia.BuildConfig
 import com.example.celestia.data.db.CelestiaDao
 import com.example.celestia.data.model.IssReading
 import com.example.celestia.data.model.KpReading
-import com.example.celestia.data.network.RetrofitInstance
-import kotlinx.coroutines.flow.Flow
-import java.text.SimpleDateFormat
-import java.util.*
 import com.example.celestia.data.model.LunarPhase
+import com.example.celestia.data.network.RetrofitInstance
+import com.example.celestia.utils.TimeUtils
+import kotlinx.coroutines.flow.Flow
 
 class CelestiaRepository(private val dao: CelestiaDao) {
 
-    // --- NOAA (Kp Index) ---
+    // -------------------------------------------------------------------------
+    //  NOAA (Kp Index)
+    // -------------------------------------------------------------------------
     val readings: Flow<List<KpReading>> = dao.getAll()
 
     suspend fun refreshData() {
@@ -26,23 +27,23 @@ class CelestiaRepository(private val dao: CelestiaDao) {
         }
     }
 
-    // --- ISS: Local Flow from Room ---
+
+    // -------------------------------------------------------------------------
+    //  ISS (Live Position) — Persisted in Room
+    // -------------------------------------------------------------------------
     val issReading: Flow<IssReading?> = dao.getIssReading()
 
-    // --- Refresh ISS Data from API ---
     suspend fun refreshIssData() {
         try {
             val response = RetrofitInstance.issApi.getIssPosition()
 
-            // Convert network model (IssPosition) -> Room entity (IssReading)
             val reading = IssReading(
                 id = 1,
                 latitude = response.latitude,
                 longitude = response.longitude,
                 altitude = response.altitude,
                 velocity = response.velocity,
-                timestamp = SimpleDateFormat("MMM d, HH:mm 'UTC'", Locale.US)
-                    .format(Date())
+                timestamp = TimeUtils.format(System.currentTimeMillis().toString())
             )
 
             dao.insertIssReading(reading)
@@ -53,6 +54,10 @@ class CelestiaRepository(private val dao: CelestiaDao) {
         }
     }
 
+
+    // -------------------------------------------------------------------------
+    //  Lunar Phase API
+    // -------------------------------------------------------------------------
     suspend fun fetchLunarPhase(
         latitude: Double,
         longitude: Double

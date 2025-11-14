@@ -21,9 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.celestia.utils.TimeUtils
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,7 +114,7 @@ fun KpIndexScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Text(
-                                "Current Kp Index: " + vm.formatKpValue(kp, decimals = 0),
+                                "Current Kp Index: $kp",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     color = Color(0xFF2B8AD2),
                                     fontSize = 20.sp,
@@ -261,7 +260,7 @@ fun KpIndexScreen(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Text(
-                                        text = vm.formatKpValue(avg.toDouble(), 2),
+                                        text = String.format("%.1f", avg),
                                         color = colorItem,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 22.sp
@@ -281,11 +280,7 @@ fun KpIndexScreen(
 
                                 // Right side: Date and time (aligned right)
                                 Text(
-                                    text = vm.formatKpTimestamp(
-                                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
-                                            .apply { timeZone = TimeZone.getTimeZone("UTC") }
-                                            .format(hour)
-                                    ),
+                                    text = TimeUtils.format(hour.time.toString()),
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                     fontSize = 13.sp,
                                     textAlign = TextAlign.End,

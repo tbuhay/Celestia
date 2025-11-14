@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.celestia.utils.TimeUtils
+import com.example.celestia.utils.FormatUtils
 import com.example.celestia.R
 import com.example.celestia.ui.theme.CelestiaYellow
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
@@ -85,8 +87,8 @@ fun LunarPhaseScreen(
     val distanceKm = lunarPhase?.moonDistance
 
     val updatedText = lunarPhase?.let {
-        vm.formatLunarTimestamp(it.date, it.currentTime)
-    } ?: "Just now"
+        TimeUtils.format(it.date, it.currentTime)
+    } ?: "Unknown"
 
     // FIXED: define moon icon ONCE and use everywhere
     val moonIconRes = vm.getMoonPhaseIconRes(lunarPhase?.moonPhase)
@@ -191,7 +193,7 @@ fun LunarPhaseScreen(
                     Column {
                         Text("Illumination", color = Color.Gray)
                         Text(
-                            String.format(Locale.US, "%.1f%%", illumination),
+                            FormatUtils.formatPercent(illumination),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
                     }
@@ -199,7 +201,7 @@ fun LunarPhaseScreen(
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Moon Age", color = Color.Gray)
                         Text(
-                            String.format(Locale.US, "%.1f days", ageDays),
+                            FormatUtils.formatMoonAge(ageDays),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
                     }
@@ -215,7 +217,7 @@ fun LunarPhaseScreen(
                     Column {
                         Text("Distance", color = Color.Gray)
                         Text(
-                            distanceKm?.let { String.format("%,.0f km", it) } ?: "N/A",
+                            distanceKm?.let { FormatUtils.formatDistance(it) } ?: "N/A",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
                     }

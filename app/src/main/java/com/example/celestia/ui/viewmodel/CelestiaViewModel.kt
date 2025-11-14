@@ -5,11 +5,15 @@ import android.util.Log
 import androidx.lifecycle.*
 import com.example.celestia.R
 import com.example.celestia.data.db.CelestiaDatabase
+import com.example.celestia.data.model.KpReading
+import com.example.celestia.data.model.LunarPhase
 import com.example.celestia.data.repository.CelestiaRepository
+import com.example.celestia.utils.TimeUtils
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
-import com.example.celestia.data.model.LunarPhase
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.abs
 
 class CelestiaViewModel(application: Application) : AndroidViewModel(application) {
@@ -18,15 +22,22 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     private val repo = CelestiaRepository(dao)
     private val prefs = application.getSharedPreferences("celestia_prefs", 0)
 
-    // --- NOAA: Kp Index ---
+    // -------------------------------------------------------------------------
+    // NOAA — Kp Index
+    // -------------------------------------------------------------------------
     val readings = repo.readings.asLiveData()
+
     private val _lastUpdated = MutableLiveData<String>()
     val lastUpdated: LiveData<String> = _lastUpdated
 
-    // --- ISS: Live Position (persisted in Room) ---
+    // -------------------------------------------------------------------------
+    // ISS Live Position
+    // -------------------------------------------------------------------------
     val issReading = repo.issReading.asLiveData()
 
-    // --- Lunar Phase ---
+    // -------------------------------------------------------------------------
+    // Lunar Phase
+    // -------------------------------------------------------------------------
     private val _lunarPhase = MutableLiveData<LunarPhase?>()
     val lunarPhase: LiveData<LunarPhase?> = _lunarPhase
 
@@ -36,21 +47,19 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     private val _lunarError = MutableLiveData<String?>()
     val lunarError: LiveData<String?> = _lunarError
 
+    private val defaultLat = 49.8951       // Winnipeg
+    private val defaultLon = -97.1384
+
     init {
         _lastUpdated.value = prefs.getString("last_updated", "Never")
     }
 
-    private fun currentLocalTime(): String {
-        val sdf = SimpleDateFormat("MMM d, HH:mm", Locale.US)
-        sdf.timeZone = TimeZone.getDefault()
-        return sdf.format(Date())
-    }
-
-    /** Refresh both NOAA + ISS data */
+    // -------------------------------------------------------------------------
+    // REFRESH ALL DATA
+    // -------------------------------------------------------------------------
     fun refresh() {
         viewModelScope.launch {
             try {
-                // --- NOAA ---
                 launch {
                     try {
                         repo.refreshData()
@@ -60,11 +69,10 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
 
-                // --- ISS ---
                 launch {
                     try {
                         repo.refreshIssData()
-                        Log.d("CelestiaVM", "ISS data refreshed via repository")
+                        Log.d("CelestiaVM", "ISS data refreshed")
                     } catch (e: Exception) {
                         Log.e("CelestiaVM", "ISS refresh failed", e)
                     }
@@ -72,15 +80,8 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
 
                 launch {
                     try {
-                        // Fetch the live lunar data from API
-                        val lunar = repo.fetchLunarPhase(
-                            latitude = defaultLat,
-                            longitude = defaultLon
-                        )
-
-                        // Push it into LiveData
+                        val lunar = repo.fetchLunarPhase(defaultLat, defaultLon)
                         _lunarPhase.postValue(lunar)
-
                         Log.d("CelestiaVM", "Lunar data refreshed")
                     } catch (e: Exception) {
                         _lunarError.postValue("Lunar refresh failed")
@@ -88,10 +89,9 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
 
-                // --- Shared timestamp (applied last) ---
-                val formattedTime = currentLocalTime()
-                prefs.edit().putString("last_updated", formattedTime).apply()
-                _lastUpdated.postValue(formattedTime)
+                val now = TimeUtils.format(System.currentTimeMillis().toString())
+                prefs.edit().putString("last_updated", now).apply()
+                _lastUpdated.postValue(now)
 
             } catch (e: Exception) {
                 Log.e("CelestiaVM", "Error during refresh()", e)
@@ -99,87 +99,28 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** NOAA formatting helpers */
-    fun formatKpTimestamp(utcString: String): String {
-        return try {
-            // NOAA sometimes omits 'Z' — handle both cases safely
-            val cleaned = utcString.trim()
-
-            val parser = if (cleaned.endsWith("Z")) {
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-            } else {
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
-            }
-
-            parser.timeZone = TimeZone.getTimeZone("UTC") // always parse as UTC
-
-            val date = parser.parse(cleaned)
-
-            val formatter = SimpleDateFormat("MMM dd, HH:mm", Locale.US)
-            formatter.timeZone = TimeZone.getDefault() // convert to device local (Winnipeg)
-            formatter.format(date!!)
-        } catch (e: Exception) {
-            // fallback — just return original UTC string
-            utcString
-        }
-    }
-
-    fun formatKpValue(kp: Double, decimals: Int = 2): String {
-        return String.format(Locale.US, "%.${decimals}f", kp)
-    }
-
-    fun groupKpReadingsHourly(readings: List<com.example.celestia.data.model.KpReading>): List<Triple<Date, Float, Float>> {
-        if (readings.isEmpty()) return emptyList()
-
-        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
-
-        // Group by truncated-to-hour timestamps
-        val grouped = readings.mapNotNull { r ->
-            try {
-                val date = parser.parse(r.timestamp)
-                if (date != null) Pair(date, r.estimatedKp.toFloat()) else null
-            } catch (_: Exception) {
-                null
-            }
-        }.groupBy { (date, _) ->
-            val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { time = date }
-            cal.set(Calendar.MINUTE, 0)
-            cal.set(Calendar.SECOND, 0)
-            cal.time
-        }
-
-        // Compute average per hour group
-        return grouped.entries.sortedByDescending { it.key }.map { (hourStart, values) ->
-            val list = values.map { it.second }
-            val avg = list.average().toFloat()
-            val high = list.maxOrNull() ?: avg
-            val low = list.minOrNull() ?: avg
-            Triple(hourStart, avg, high.coerceAtLeast(low))
-        }
-    }
-
+    // -------------------------------------------------------------------------
+    // LUNAR HELPERS
+    // -------------------------------------------------------------------------
     fun formatMoonPhaseName(raw: String?): String {
         if (raw.isNullOrBlank()) return "Unknown Phase"
-        return raw
-            .lowercase()
+        return raw.lowercase()
             .replace("_", " ")
             .replaceFirstChar { it.uppercase() }
     }
 
     fun parseIlluminationPercent(lunar: LunarPhase?): Double {
         if (lunar == null) return 0.0
-        val raw = lunar.moonIlluminationPercentage
+        return lunar.moonIlluminationPercentage
             .replace("%", "")
             .trim()
-        val value = raw.toDoubleOrNull() ?: 0.0
-        return abs(value) // negative means waning in this API
+            .toDoubleOrNull()
+            ?.let { abs(it) }
+            ?: 0.0
     }
 
     fun computeMoonAgeDays(lunar: LunarPhase?): Double {
         if (lunar == null) return 0.0
-
         return when (lunar.moonPhase.uppercase(Locale.US)) {
             "NEW_MOON"        -> 0.0
             "WAXING_CRESCENT" -> 4.0
@@ -195,7 +136,6 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
 
     fun getMoonPhaseIconRes(phase: String?): Int {
         return when (phase?.uppercase(Locale.US)) {
-
             "NEW_MOON"        -> R.drawable.new_moon
             "WAXING_CRESCENT" -> R.drawable.waxing_crescent_moon
             "FIRST_QUARTER"   -> R.drawable.first_quarter_moon
@@ -204,8 +144,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             "WANING_GIBBOUS"  -> R.drawable.waning_gibbous_moon
             "LAST_QUARTER"    -> R.drawable.last_quarter_moon
             "WANING_CRESCENT" -> R.drawable.waning_crescent_moon
-
-            else              -> R.drawable.full_moon  // safe fallback
+            else              -> R.drawable.full_moon
         }
     }
 
@@ -213,23 +152,13 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
         return when (phase?.uppercase()) {
             "WAXING_CRESCENT",
             "FIRST_QUARTER",
-            "WAXING_GIBBOUS" -> true
-            "FULL_MOON" -> true     // peak light
-            "WANING_GIBBOUS",
-            "LAST_QUARTER",
-            "WANING_CRESCENT",
-            "NEW_MOON" -> false
-
-            else -> true
+            "WAXING_GIBBOUS",
+            "FULL_MOON" -> true
+            else -> false
         }
     }
-    private val defaultLat = 49.8951   // Winnipeg
-    private val defaultLon = -97.1384
 
-    fun loadLunarPhase(
-        latitude: Double = defaultLat,
-        longitude: Double = defaultLon
-    ) {
+    fun loadLunarPhase(latitude: Double = defaultLat, longitude: Double = defaultLon) {
         viewModelScope.launch {
             _isLunarLoading.value = true
             _lunarError.value = null
@@ -245,27 +174,27 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             }
         }
     }
-    fun formatLunarTimestamp(date: String, time: String): String {
-        return try {
-            // date: "2025-11-12"
-            // time: "19:04:19.662"  (already local for your location)
 
-            // Parse just the date so we can format "Nov 12"
-            val dayParser = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-            val dateObj = dayParser.parse(date)
+    // -------------------------------------------------------------------------
+    // GROUP HOURLY KP DATA (USED IN KpIndexScreen)
+    // -------------------------------------------------------------------------
+    fun groupKpReadingsHourly(readings: List<KpReading>): List<Triple<Date, Double, Double>> {
+        if (readings.isEmpty()) return emptyList()
 
-            val dayFormatter = java.text.SimpleDateFormat("MMM d", java.util.Locale.US)
-            val dayText = dayFormatter.format(dateObj!!)
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
 
-            // Take only HH:mm from "19:04:19.662"
-            val timeText = time.take(5)  // "19:04"
-
-            "$dayText, $timeText"
-        } catch (e: Exception) {
-            // Fallback – still readable
-            "${date} ${time.take(5)}"
-        }
+        return readings
+            .groupBy { reading ->
+                val date = sdf.parse(reading.timestamp)
+                val epoch = date.time
+                Date(epoch - (epoch % (60 * 60 * 1000))) // floor to hour
+            }
+            .map { (hour, group) ->
+                val avg = group.map { it.estimatedKp }.average()
+                val high = group.maxOf { it.kpIndex }.toDouble()
+                Triple(hour, avg, high)
+            }
+            .sortedByDescending { it.first }
     }
-
-
 }
