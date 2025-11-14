@@ -224,7 +224,11 @@ fun KpIndexScreen(
                 items(grouped.take(12).withIndex().toList()) { indexed ->
 
                     val (i, triple) = indexed
-                    val (hour, avg, high) = triple
+
+                    val hour = triple.hour
+                    val avg = triple.avg
+                    val high = triple.high
+                    val low = triple.low
 
                     val colorItem = when {
                         avg >= 7 -> Color(0xFFD32F2F)
@@ -236,11 +240,14 @@ fun KpIndexScreen(
                     val arrowIconRes = if (i == grouped.lastIndex) {
                         R.drawable.ic_no_change
                     } else {
-                        val prevAvg = grouped[i + 1].second
+                        val prevAvg = grouped[i + 1].avg
+                        val delta = avg - prevAvg
+                        val epsilon = 0.05       // tolerance for floating-point “sameness”
+
                         when {
-                            avg > prevAvg -> R.drawable.ic_trend_up
-                            avg < prevAvg -> R.drawable.ic_trend_down
-                            else -> R.drawable.ic_no_change
+                            delta > epsilon  -> R.drawable.ic_trend_up
+                            delta < -epsilon -> R.drawable.ic_trend_down
+                            else             -> R.drawable.ic_no_change
                         }
                     }
 
@@ -307,7 +314,7 @@ fun KpIndexScreen(
                             ) {
 
                                 Text(
-                                    text = "High: ${"%.1f".format(high)} | Low: ${"%.1f".format(avg)}",
+                                    text = "High: ${"%.1f".format(high)} | Low: ${"%.1f".format(low)}",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                     )

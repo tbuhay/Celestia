@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.*
 import com.example.celestia.R
 import com.example.celestia.data.db.CelestiaDatabase
+import com.example.celestia.data.model.KpHourlyGroup
 import com.example.celestia.data.model.KpReading
 import com.example.celestia.data.model.LunarPhase
 import com.example.celestia.data.repository.CelestiaRepository
@@ -178,7 +179,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     // -------------------------------------------------------------------------
     // GROUP HOURLY KP DATA (USED IN KpIndexScreen)
     // -------------------------------------------------------------------------
-    fun groupKpReadingsHourly(readings: List<KpReading>): List<Triple<Date, Double, Double>> {
+    fun groupKpReadingsHourly(readings: List<KpReading>): List<KpHourlyGroup> {
         if (readings.isEmpty()) return emptyList()
 
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
@@ -188,14 +189,17 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             .groupBy { reading ->
                 val date = sdf.parse(reading.timestamp)
                 val epoch = date.time
-                Date(epoch - (epoch % (60 * 60 * 1000))) // floor to hour
+                Date(epoch - (epoch % (60 * 60 * 1000))) // floor to the top of the hour
             }
             .map { (hour, group) ->
-                val avg = group.map { it.estimatedKp }.average()
-                val high = group.maxOf { it.estimatedKp }
-                Triple(hour, avg, high)
+                val values = group.map { it.estimatedKp }
+                val avg = values.average()
+                val high = values.maxOrNull() ?: avg
+                val low = values.minOrNull() ?: avg
+
+                KpHourlyGroup(hour, avg, high, low)
             }
-            .sortedByDescending { it.first }
+            .sortedByDescending { it.hour }
     }
 
     fun formatKpValue(value: Double, decimals: Int = 1): String {
