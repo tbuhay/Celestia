@@ -28,11 +28,7 @@ import com.example.celestia.utils.FormatUtils
 import com.example.celestia.R
 import com.example.celestia.ui.theme.CelestiaYellow
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
-import java.util.Locale
 
-
-// -----------------------------------------------------------------------------
-//  Celestia Phase Card (deep navy + 1dp border)
 // -----------------------------------------------------------------------------
 @Composable
 fun CelestiaPhaseCard(
@@ -59,9 +55,6 @@ fun CelestiaPhaseCard(
     }
 }
 
-
-// -----------------------------------------------------------------------------
-//  Lunar Phase Screen
 // -----------------------------------------------------------------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,9 +70,6 @@ fun LunarPhaseScreen(
         vm.loadLunarPhase()
     }
 
-    // -----------------------
-    // Derived Values
-    // -----------------------
     val phaseName = vm.formatMoonPhaseName(lunarPhase?.moonPhase)
     val illumination = vm.parseIlluminationPercent(lunarPhase)
     val waxing = vm.isWaxing(lunarPhase?.moonPhase)
@@ -90,19 +80,25 @@ fun LunarPhaseScreen(
         TimeUtils.format(it.date, it.currentTime)
     } ?: "Unknown"
 
-    // FIXED: define moon icon ONCE and use everywhere
     val moonIconRes = vm.getMoonPhaseIconRes(lunarPhase?.moonPhase)
-
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Lunar Phase") },
+                title = {
+                    Text(
+                        "Lunar Phase",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
@@ -122,18 +118,20 @@ fun LunarPhaseScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
-
-            // -----------------------
-            // Loading / Error
-            // -----------------------
+            // Loading / Error states
             when {
-                isLoading -> Text("Loading current lunar data...", color = Color.Gray)
+                isLoading -> Text(
+                    "Loading current lunar data...",
+                    style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
+                )
+
                 errorMessage != null -> Text(
                     errorMessage ?: "Error loading lunar data",
-                    color = MaterialTheme.colorScheme.error
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.error
+                    )
                 )
             }
-
 
             // -----------------------
             // MAIN PHASE CARD
@@ -153,11 +151,15 @@ fun LunarPhaseScreen(
 
                     Text(
                         text = phaseName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold
+                        )
                     )
 
-                    Text("Current Lunar Phase", color = Color.Gray)
+                    Text(
+                        "Current Lunar Phase",
+                        style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
+                    )
                 }
             }
 
@@ -178,8 +180,9 @@ fun LunarPhaseScreen(
                     )
                     Text(
                         "Current Details",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
                     )
                 }
 
@@ -191,18 +194,24 @@ fun LunarPhaseScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Illumination", color = Color.Gray)
+                        Text(
+                            "Illumination",
+                            style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
+                        )
                         Text(
                             FormatUtils.formatPercent(illumination),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                         )
                     }
 
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Moon Age", color = Color.Gray)
+                        Text(
+                            "Moon Age",
+                            style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
+                        )
                         Text(
                             FormatUtils.formatMoonAge(ageDays),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                         )
                     }
                 }
@@ -215,23 +224,28 @@ fun LunarPhaseScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Distance", color = Color.Gray)
+                        Text(
+                            "Distance",
+                            style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
+                        )
                         Text(
                             distanceKm?.let { FormatUtils.formatDistance(it) } ?: "N/A",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                         )
                     }
 
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Updated", color = Color.Gray)
+                        Text(
+                            "Updated",
+                            style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
+                        )
                         Text(
                             updatedText,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                         )
                     }
                 }
             }
-
 
             // -----------------------
             // TODAY'S SCHEDULE CARD
@@ -242,14 +256,12 @@ fun LunarPhaseScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        Icons.Default.CalendarMonth,
-                        contentDescription = null
-                    )
+                    Icon(Icons.Default.CalendarMonth, contentDescription = null)
                     Text(
                         "Today’s Schedule",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
                     )
                 }
 
@@ -269,8 +281,14 @@ fun LunarPhaseScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Moonrise: $moonriseText")
-                    Text("Moonset: $moonsetText")
+                    Text(
+                        "Moonrise: $moonriseText",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        "Moonset: $moonsetText",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
         }

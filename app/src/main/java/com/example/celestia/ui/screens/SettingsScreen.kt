@@ -18,7 +18,7 @@ import com.example.celestia.ui.viewmodel.AuthViewModel
 
 
 // -----------------------------------------------------------------------------
-//  Shared Celestia Card (same as others)
+//  Shared Celestia Settings Card
 // -----------------------------------------------------------------------------
 @Composable
 fun CelestiaSettingsCard(
@@ -47,23 +47,31 @@ fun CelestiaSettingsCard(
 
 
 // -----------------------------------------------------------------------------
-//  Settings Screen
+//  Settings Screen (Typography Updated Only)
 // -----------------------------------------------------------------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     navController: NavController,
-    authVM: AuthViewModel = viewModel()   // Use your actual Auth VM name
+    authVM: AuthViewModel = viewModel()
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = {
+                    Text(
+                        "Settings",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
@@ -83,14 +91,14 @@ fun SettingsScreen(
         ) {
 
             // ---------------------------------------------------------------
-            //  General Settings Header (optional)
+            //  Section Header
             // ---------------------------------------------------------------
             Text(
                 text = "Account",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.Gray
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
             )
-
 
             // ---------------------------------------------------------------
             //  LOGOUT BUTTON CARD
@@ -110,7 +118,7 @@ fun SettingsScreen(
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFB00020) // Red
+                            containerColor = Color(0xFFB00020)
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -119,8 +127,9 @@ fun SettingsScreen(
                     ) {
                         Text(
                             text = "Log Out",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
                         )
                     }
                 }

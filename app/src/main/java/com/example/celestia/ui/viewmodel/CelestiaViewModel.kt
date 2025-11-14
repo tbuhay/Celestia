@@ -192,9 +192,20 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             }
             .map { (hour, group) ->
                 val avg = group.map { it.estimatedKp }.average()
-                val high = group.maxOf { it.kpIndex }.toDouble()
+                val high = group.maxOf { it.estimatedKp }
                 Triple(hour, avg, high)
             }
             .sortedByDescending { it.first }
+    }
+
+    fun formatKpValue(value: Double, decimals: Int = 1): String {
+        return try {
+            if (value.isNaN()) return "N/A"
+            String.format("%.${decimals}f", value)
+                .trimEnd('0')
+                .trimEnd('.')
+        } catch (e: Exception) {
+            value.toString()
+        }
     }
 }

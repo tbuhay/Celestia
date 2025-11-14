@@ -22,17 +22,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.celestia.utils.FormatUtils
-import com.example.celestia.utils.TimeUtils
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import kotlin.math.abs
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,27 +39,35 @@ fun IssLocationScreen(
 ) {
     val issReading by vm.issReading.observeAsState()
     val cardShape = RoundedCornerShape(14.dp)
-
     val scroll = rememberScrollState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ISS Location") },
+                title = {
+                    Text(
+                        "ISS Location",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -79,7 +84,7 @@ fun IssLocationScreen(
                     .border(1.dp, Color(0x33FFFFFF), cardShape),
                 shape = cardShape,
                 colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha=0.2f)
+                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
                 ),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
             ) {
@@ -109,7 +114,9 @@ fun IssLocationScreen(
                                 tint = Color(0xFFB39DDB)
                             )
                         }
+
                         Spacer(Modifier.width(12.dp))
+
                         Column {
                             Text(
                                 "International Space Station",
@@ -117,8 +124,9 @@ fun IssLocationScreen(
                             )
                             Text(
                                 "Live Position",
-                                color = Color.LightGray,
-                                style = MaterialTheme.typography.labelLarge
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Color.LightGray
+                                )
                             )
                         }
                     }
@@ -141,17 +149,19 @@ fun IssLocationScreen(
                             label = "Velocity",
                             value = FormatUtils.formatVelocity(issReading!!.velocity)
                         )
-                        Text("Updated: ${issReading!!.timestamp}",
-                            color = Color.LightGray,
-                            style = MaterialTheme.typography.bodySmall.copy(
+
+                        Text(
+                            "Updated: ${issReading!!.timestamp}",
+                            style = MaterialTheme.typography.labelSmall.copy(
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
                         )
                     } else {
                         Text(
-                            text = "No ISS data available yet.",
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.bodyMedium
+                            "No ISS data available yet.",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = Color.Gray
+                            )
                         )
                     }
                 }
@@ -173,19 +183,21 @@ fun IssLocationScreen(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                     )
                 ) {
-                    Box(Modifier.fillMaxSize()) {
-                        GoogleMap(
-                            modifier = Modifier.fillMaxSize(),
-                            cameraPositionState = cameraPositionState
-                        ) {
-                            Marker(
-                                state = MarkerState(position = issPosition),
-                                title = "ISS",
-                                snippet = FormatUtils.formatCoordinates(issReading!!.latitude, issReading!!.longitude)
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState
+                    ) {
+                        Marker(
+                            state = MarkerState(position = issPosition),
+                            title = "ISS",
+                            snippet = FormatUtils.formatCoordinates(
+                                issReading!!.latitude,
+                                issReading!!.longitude
                             )
-                        }
+                        )
                     }
                 }
+
             } else {
                 ElevatedCard(
                     modifier = Modifier
@@ -196,7 +208,12 @@ fun IssLocationScreen(
                     )
                 ) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Loading ISS location...", color = Color.Gray)
+                        Text(
+                            "Loading ISS location...",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = Color.Gray
+                            )
+                        )
                     }
                 }
             }
@@ -205,11 +222,7 @@ fun IssLocationScreen(
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(
-                        width = 1.dp,
-                        color = Color(0x33FFFFFF),
-                        shape = RoundedCornerShape(14.dp)
-                    ),
+                    .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(14.dp)),
                 shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = MaterialTheme.colorScheme.surface
@@ -220,34 +233,27 @@ fun IssLocationScreen(
                         .fillMaxWidth()
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
-                )  {
+                ) {
+
                     Text(
                         "About the ISS",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                        style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.SemiBold
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(Modifier.width(10.dp))
-
                     Text(
                         text = "The International Space Station is a modular space station in low Earth orbit. " +
-                                "It serves as a microgravity and space environment research laboratory where scientific " +
-                                "research is conducted in astrobiology, astronomy, meteorology, physics, and other fields.",
+                                "It serves as a microgravity research laboratory for many scientific fields.",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 17.sp,
-                            lineHeight = 22.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Start
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 2.dp)
+                            .padding(horizontal = 2.dp),
+                        textAlign = TextAlign.Start
                     )
-
-                    Spacer(Modifier.width(10.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -255,11 +261,7 @@ fun IssLocationScreen(
                     ) {
                         Surface(
                             modifier = Modifier
-                                .border(
-                                    width = 1.dp,
-                                    color = Color(0x33FFFFFF),
-                                    shape = RoundedCornerShape(14.dp)
-                                )
+                                .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(14.dp))
                                 .weight(1f)
                                 .clip(RoundedCornerShape(16.dp)),
                             tonalElevation = 3.dp,
@@ -269,18 +271,21 @@ fun IssLocationScreen(
                                 Modifier.padding(12.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("Mass", color = Color.White, style = MaterialTheme.typography.labelSmall)
-                                Text("420,000 kg", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "Mass",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White
+                                )
+                                Text(
+                                    "420,000 kg",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
                             }
                         }
 
                         Surface(
                             modifier = Modifier
-                                .border(
-                                    width = 1.dp,
-                                    color = Color(0x33FFFFFF),
-                                    shape = RoundedCornerShape(14.dp)
-                                )
+                                .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(14.dp))
                                 .weight(1f)
                                 .clip(RoundedCornerShape(16.dp)),
                             tonalElevation = 3.dp,
@@ -290,8 +295,15 @@ fun IssLocationScreen(
                                 Modifier.padding(12.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("Launch Date", color = Color.White, style = MaterialTheme.typography.labelSmall)
-                                Text("Nov 20, 1998", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "Launch Date",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White
+                                )
+                                Text(
+                                    "Nov 20, 1998",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
                             }
                         }
                     }
@@ -302,17 +314,30 @@ fun IssLocationScreen(
 }
 
 @Composable
-private fun StatRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
+private fun StatRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
+
         Icon(
             icon,
             contentDescription = null,
-            tint = Color(0xFFB39DDB) // lighter purple
+            tint = Color(0xFFB39DDB)
         )
+
         Spacer(Modifier.width(12.dp))
+
         Column {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-            Text(value, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
     }
 }
