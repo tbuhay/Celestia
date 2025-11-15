@@ -88,6 +88,9 @@ dependencies {
     implementation(libs.coil.compose)
 
     implementation("androidx.datastore:datastore-preferences:1.1.0")
+    implementation ("com.google.android.gms:play-services-auth:21.0.0")
+    implementation ("com.google.firebase:firebase-auth-ktx")
+    implementation ("androidx.browser:browser:1.5.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
