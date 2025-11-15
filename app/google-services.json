@@ -12,7 +12,20 @@
           "package_name": "com.example.celestia"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "521148102703-qkjp656klt7tfdj27l5p5dmf8q1jhnil.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.celestia",
+            "certificate_hash": "4c532a8b10f56e94b24f86bfc3729f417d8652bb"
+          }
+        },
+        {
+          "client_id": "521148102703-baq1ucn5r4mj8vhn6otfkm09e53rumuo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyA-SNYNVY-5oc7znI16A8EJ0jlfBOUdBYo"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "521148102703-baq1ucn5r4mj8vhn6otfkm09e53rumuo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
