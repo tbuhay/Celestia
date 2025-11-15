@@ -241,13 +241,10 @@ fun KpIndexScreen(
                         R.drawable.ic_no_change
                     } else {
                         val prevAvg = grouped[i + 1].avg
-                        val delta = avg - prevAvg
-                        val epsilon = 0.05       // tolerance for floating-point “sameness”
-
                         when {
-                            delta > epsilon  -> R.drawable.ic_trend_up
-                            delta < -epsilon -> R.drawable.ic_trend_down
-                            else             -> R.drawable.ic_no_change
+                            avg > prevAvg -> R.drawable.ic_trend_up
+                            avg < prevAvg -> R.drawable.ic_trend_down
+                            else -> R.drawable.ic_no_change
                         }
                     }
 
@@ -278,7 +275,7 @@ fun KpIndexScreen(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Text(
-                                        text = String.format("%.1f", avg),
+                                        text = String.format("%.2f", avg),
                                         style = MaterialTheme.typography.displayMedium.copy(
                                             color = colorItem
                                         )
@@ -314,7 +311,7 @@ fun KpIndexScreen(
                             ) {
 
                                 Text(
-                                    text = "High: ${"%.1f".format(high)} | Low: ${"%.1f".format(low)}",
+                                    text = "High: ${"%.2f".format(high)} | Low: ${"%.2f".format(low)}",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                     )

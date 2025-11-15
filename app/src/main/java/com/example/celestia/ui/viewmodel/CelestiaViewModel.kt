@@ -51,6 +51,9 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     private val defaultLat = 49.8951       // Winnipeg
     private val defaultLon = -97.1384
 
+    private val _lunarUpdated = MutableLiveData<String>()
+    val lunarUpdated: LiveData<String> = _lunarUpdated
+
     init {
         _lastUpdated.value = prefs.getString("last_updated", "Never")
     }
@@ -83,6 +86,9 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                     try {
                         val lunar = repo.fetchLunarPhase(defaultLat, defaultLon)
                         _lunarPhase.postValue(lunar)
+
+                        _lunarUpdated.postValue(currentLocalTime())
+
                         Log.d("CelestiaVM", "Lunar data refreshed")
                     } catch (e: Exception) {
                         _lunarError.postValue("Lunar refresh failed")
@@ -167,6 +173,9 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             try {
                 val result = repo.fetchLunarPhase(latitude, longitude)
                 _lunarPhase.postValue(result)
+
+                _lunarUpdated.postValue(currentLocalTime())
+
             } catch (e: Exception) {
                 _lunarError.postValue("Unable to load lunar data")
                 Log.e("CelestiaVM", "loadLunarPhase failed", e)
@@ -174,6 +183,31 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                 _isLunarLoading.postValue(false)
             }
         }
+    }
+
+    private val lunarCycleDays = 29.53
+
+    fun daysUntilNextFullMoon(age: Double): Double {
+        val fullMoonAge = 14.8
+        return if (age <= fullMoonAge) {
+            fullMoonAge - age
+        } else {
+            (lunarCycleDays - age) + fullMoonAge
+        }
+    }
+
+    fun daysUntilNextNewMoon(age: Double): Double {
+        return if (age <= 0.0) {
+            0.0
+        } else {
+            lunarCycleDays - age
+        }
+    }
+
+    private fun currentLocalTime(): String {
+        val sdf = SimpleDateFormat("MMM d, HH:mm", Locale.US)
+        sdf.timeZone = TimeZone.getDefault()
+        return sdf.format(Date())
     }
 
     // -------------------------------------------------------------------------
@@ -202,7 +236,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             .sortedByDescending { it.hour }
     }
 
-    fun formatKpValue(value: Double, decimals: Int = 1): String {
+    fun formatKpValue(value: Double, decimals: Int = 2): String {
         return try {
             if (value.isNaN()) return "N/A"
             String.format("%.${decimals}f", value)
