@@ -7,6 +7,7 @@ object RetrofitInstance {
     private const val NOAA_BASE_URL = "https://services.swpc.noaa.gov/json/"
     private const val ISS_BASE_URL = "https://api.wheretheiss.at/"
     private const val IPGEO_BASE_URL = "https://api.ipgeolocation.io/"
+    private const val NASA_BASE_URL = "https://api.nasa.gov/neo/rest/v1/"
 
     val noaaApi: NoaaApi by lazy {
         Retrofit.Builder()
@@ -30,5 +31,13 @@ object RetrofitInstance {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(LunarApi::class.java)
+    }
+
+    val asteroidApi: AsteroidApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(NASA_BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(AsteroidApi::class.java)
     }
 }

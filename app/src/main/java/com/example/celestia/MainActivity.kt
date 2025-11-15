@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
                     composable("home") { HomeScreen(navController, viewModel()) }
                     composable("kp_index") { KpIndexScreen(navController, viewModel()) }
                     composable("iss_location") { IssLocationScreen(navController, viewModel()) }
-                    composable("asteroid_tracking") { AsteroidTrackingScreen(navController) }
+                    composable("asteroid_tracking") { AsteroidTrackingScreen(navController, viewModel()) }
                     composable("lunar_phase") { LunarPhaseScreen(navController) }
 
                     // Settings Screen(s)

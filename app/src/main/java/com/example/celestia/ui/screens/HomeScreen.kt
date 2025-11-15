@@ -33,6 +33,9 @@ fun HomeScreen(
     val readings by vm.readings.observeAsState(emptyList())
     val issReading by vm.issReading.observeAsState()
     val lunarPhase by vm.lunarPhase.observeAsState()
+    val nextAsteroid by vm.nextAsteroid.observeAsState()
+    val asteroidList = vm.asteroidList.observeAsState(emptyList()).value
+    val featuredAsteroid = vm.getFeaturedAsteroid(asteroidList)
 
     val scrollState = rememberScrollState()
     val cardShape = RoundedCornerShape(14.dp)
@@ -203,14 +206,18 @@ fun HomeScreen(
                                 .alignByBaseline()
                         )
                         Text(
-                            text = "2024 MK",
+                            text = nextAsteroid?.name ?: "No data",
                             modifier = Modifier.alignByBaseline(),
                             style = MaterialTheme.typography.titleMedium.copy(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         )
                     },
-                    description = "Approach: Nov 21 | 0.015 AU",
+                    description = nextAsteroid?.let {
+                        val date = it.approachDate
+                        val distance = String.format("%.3f AU", it.missDistanceAu)
+                        "Approach: $date | $distance"
+                    } ?: "Tap Reload to fetch asteroid data.",
                     shape = cardShape,
                     onClick = { navController.navigate("asteroid_tracking") }
                 )

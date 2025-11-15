@@ -4,8 +4,10 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.example.celestia.data.model.AsteroidApproach
 import com.example.celestia.data.model.IssReading
 import com.example.celestia.data.model.KpReading
+import com.example.celestia.data.model.LunarPhaseEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao interface CelestiaDao {
@@ -24,4 +26,28 @@ import kotlinx.coroutines.flow.Flow
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertIssReading(reading: IssReading)
+
+    // ---------------- ASTEROIDS ----------------
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAsteroids(asteroids: List<AsteroidApproach>)
+
+    @Query("DELETE FROM asteroid_approaches")
+    suspend fun clearAsteroids()
+
+    @Query("SELECT * FROM asteroid_approaches ORDER BY approachDate ASC")
+    fun getAllAsteroids(): Flow<List<AsteroidApproach>>
+
+    @Query("SELECT * FROM asteroid_approaches ORDER BY approachDate ASC LIMIT 1")
+    fun getNextAsteroid(): Flow<AsteroidApproach?>
+
+    // ---------------------
+    // Lunar Phase
+    // ---------------------
+
+    @Query("SELECT * FROM lunar_phase LIMIT 1")
+    fun getLunarPhase(): Flow<LunarPhaseEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLunarPhase(entity: LunarPhaseEntity)
 }

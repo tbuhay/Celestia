@@ -5,13 +5,15 @@ import android.util.Log
 import androidx.lifecycle.*
 import com.example.celestia.R
 import com.example.celestia.data.db.CelestiaDatabase
+import com.example.celestia.data.model.AsteroidApproach
 import com.example.celestia.data.model.KpHourlyGroup
 import com.example.celestia.data.model.KpReading
-import com.example.celestia.data.model.LunarPhase
+import com.example.celestia.data.model.LunarPhaseEntity
 import com.example.celestia.data.repository.CelestiaRepository
 import com.example.celestia.utils.TimeUtils
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -37,10 +39,9 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     val issReading = repo.issReading.asLiveData()
 
     // -------------------------------------------------------------------------
-    // Lunar Phase
+    // Lunar Phase (persistent in Room)
     // -------------------------------------------------------------------------
-    private val _lunarPhase = MutableLiveData<LunarPhase?>()
-    val lunarPhase: LiveData<LunarPhase?> = _lunarPhase
+    val lunarPhase = repo.lunarPhase.asLiveData()
 
     private val _isLunarLoading = MutableLiveData<Boolean>()
     val isLunarLoading: LiveData<Boolean> = _isLunarLoading
@@ -48,11 +49,17 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     private val _lunarError = MutableLiveData<String?>()
     val lunarError: LiveData<String?> = _lunarError
 
-    private val defaultLat = 49.8951       // Winnipeg
+    private val defaultLat = 49.8951
     private val defaultLon = -97.1384
 
     private val _lunarUpdated = MutableLiveData<String>()
     val lunarUpdated: LiveData<String> = _lunarUpdated
+
+    // -------------------------------------------------------------------------
+    // Asteroids
+    // -------------------------------------------------------------------------
+    val nextAsteroid = repo.nextAsteroid.asLiveData()
+    val asteroidList = repo.allAsteroids.asLiveData()
 
     init {
         _lastUpdated.value = prefs.getString("last_updated", "Never")
@@ -64,6 +71,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     fun refresh() {
         viewModelScope.launch {
             try {
+                // NOAA
                 launch {
                     try {
                         repo.refreshData()
@@ -73,6 +81,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
 
+                // ISS
                 launch {
                     try {
                         repo.refreshIssData()
@@ -82,20 +91,32 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
 
+                // Lunar Phase (persistent)
                 launch {
                     try {
-                        val lunar = repo.fetchLunarPhase(defaultLat, defaultLon)
-                        _lunarPhase.postValue(lunar)
-
+                        _isLunarLoading.postValue(true)
+                        repo.refreshLunarPhase(defaultLat, defaultLon)
                         _lunarUpdated.postValue(currentLocalTime())
-
-                        Log.d("CelestiaVM", "Lunar data refreshed")
+                        Log.d("CelestiaVM", "Lunar phase refreshed")
                     } catch (e: Exception) {
                         _lunarError.postValue("Lunar refresh failed")
                         Log.e("CelestiaVM", "Lunar refresh failed", e)
+                    } finally {
+                        _isLunarLoading.postValue(false)
                     }
                 }
 
+                // Asteroids
+                launch {
+                    try {
+                        repo.refreshAsteroids()
+                        Log.d("CelestiaVM", "Asteroid data refreshed")
+                    } catch (e: Exception) {
+                        Log.e("CelestiaVM", "Asteroid refresh failed", e)
+                    }
+                }
+
+                // Update global "Last Updated" timestamp (for Home screen header)
                 val now = TimeUtils.format(System.currentTimeMillis().toString())
                 prefs.edit().putString("last_updated", now).apply()
                 _lastUpdated.postValue(now)
@@ -107,7 +128,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     }
 
     // -------------------------------------------------------------------------
-    // LUNAR HELPERS
+    // LUNAR HELPERS (use LunarPhaseEntity? now)
     // -------------------------------------------------------------------------
     fun formatMoonPhaseName(raw: String?): String {
         if (raw.isNullOrBlank()) return "Unknown Phase"
@@ -116,9 +137,9 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             .replaceFirstChar { it.uppercase() }
     }
 
-    fun parseIlluminationPercent(lunar: LunarPhase?): Double {
+    fun parseIlluminationPercent(lunar: LunarPhaseEntity?): Double {
         if (lunar == null) return 0.0
-        return lunar.moonIlluminationPercentage
+        return lunar.illuminationPercent
             .replace("%", "")
             .trim()
             .toDoubleOrNull()
@@ -126,7 +147,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             ?: 0.0
     }
 
-    fun computeMoonAgeDays(lunar: LunarPhase?): Double {
+    fun computeMoonAgeDays(lunar: LunarPhaseEntity?): Double {
         if (lunar == null) return 0.0
         return when (lunar.moonPhase.uppercase(Locale.US)) {
             "NEW_MOON"        -> 0.0
@@ -171,11 +192,8 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             _lunarError.value = null
 
             try {
-                val result = repo.fetchLunarPhase(latitude, longitude)
-                _lunarPhase.postValue(result)
-
+                repo.refreshLunarPhase(latitude, longitude)
                 _lunarUpdated.postValue(currentLocalTime())
-
             } catch (e: Exception) {
                 _lunarError.postValue("Unable to load lunar data")
                 Log.e("CelestiaVM", "loadLunarPhase failed", e)
@@ -221,7 +239,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
 
         return readings
             .groupBy { reading ->
-                val date = sdf.parse(reading.timestamp)
+                val date = sdf.parse(reading.timestamp)!!   // <- fix nullable Date?
                 val epoch = date.time
                 Date(epoch - (epoch % (60 * 60 * 1000))) // floor to the top of the hour
             }
@@ -236,14 +254,56 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             .sortedByDescending { it.hour }
     }
 
-    fun formatKpValue(value: Double, decimals: Int = 2): String {
-        return try {
-            if (value.isNaN()) return "N/A"
-            String.format("%.${decimals}f", value)
-                .trimEnd('0')
-                .trimEnd('.')
-        } catch (e: Exception) {
-            value.toString()
+    // -------------------------------------------------------------------------
+    // ASTEROID HELPERS — Option D Filtering
+    // -------------------------------------------------------------------------
+    private fun avgDiameter(asteroid: AsteroidApproach): Double {
+        return (asteroid.diameterMinMeters + asteroid.diameterMaxMeters) / 2.0
+    }
+
+    private fun isMeaningful(asteroid: AsteroidApproach): Boolean {
+        val diameter = avgDiameter(asteroid)
+        val isBigEnough = diameter >= 120.0     // meters
+        val isCloseEnough = asteroid.missDistanceAu <= 0.5
+        return isBigEnough && isCloseEnough
+    }
+
+    private fun isWithinNext7Days(dateString: String): Boolean {
+        val today = LocalDate.now()
+        val date = LocalDate.parse(dateString)
+        return !date.isBefore(today) && !date.isAfter(today.plusDays(7))
+    }
+
+    fun getMeaningfulAsteroids(list: List<AsteroidApproach>): List<AsteroidApproach> {
+        return list.filter { asteroid ->
+            isMeaningful(asteroid) && isWithinNext7Days(asteroid.approachDate)
         }
+            .sortedWith(
+                compareBy<AsteroidApproach> { it.missDistanceAu }
+                    .thenBy { LocalDate.parse(it.approachDate) }
+            )
+    }
+
+    fun getNext7DaysList(list: List<AsteroidApproach>): List<AsteroidApproach> {
+        return list.filter { isMeaningful(it) && isWithinNext7Days(it.approachDate) }
+            .sortedBy { LocalDate.parse(it.approachDate) }
+    }
+
+    // Featured asteroid for UI (Option D)
+    fun getFeaturedAsteroid(list: List<AsteroidApproach>): AsteroidApproach? {
+        if (list.isEmpty()) return null
+
+        // First: meaningful asteroid (size + distance) within next 7 days
+        val meaningful = getMeaningfulAsteroids(list)
+        if (meaningful.isNotEmpty()) return meaningful.first()
+
+        // Second fallback: closest asteroid within next 7 days
+        val next7 = list.filter { isWithinNext7Days(it.approachDate) }
+        if (next7.isNotEmpty()) {
+            return next7.minByOrNull { it.missDistanceAu }
+        }
+
+        // Last fallback: closest in entire list
+        return list.minByOrNull { it.missDistanceAu }
     }
 }

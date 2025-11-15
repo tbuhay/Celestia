@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -31,6 +30,8 @@ import com.example.celestia.ui.theme.CelestiaYellow
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import java.util.Locale
 
+// -----------------------------------------------------------------------------
+// Phase Card
 // -----------------------------------------------------------------------------
 @Composable
 fun CelestiaPhaseCard(
@@ -58,6 +59,8 @@ fun CelestiaPhaseCard(
 }
 
 // -----------------------------------------------------------------------------
+// Lunar Phase Screen
+// -----------------------------------------------------------------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LunarPhaseScreen(
@@ -67,21 +70,30 @@ fun LunarPhaseScreen(
     val lunarPhase by vm.lunarPhase.observeAsState()
     val isLoading by vm.isLunarLoading.observeAsState(false)
     val errorMessage by vm.lunarError.observeAsState()
+    val updatedText by vm.lunarUpdated.observeAsState("Unknown")
 
+    // Load on launch
     LaunchedEffect(Unit) {
         vm.loadLunarPhase()
     }
 
+    // Updated field names for Room Entity
     val phaseName = vm.formatMoonPhaseName(lunarPhase?.moonPhase)
     val illumination = vm.parseIlluminationPercent(lunarPhase)
     val waxing = vm.isWaxing(lunarPhase?.moonPhase)
     val ageDays = vm.computeMoonAgeDays(lunarPhase)
-    val distanceKm = lunarPhase?.moonDistance
+    val distanceKm = lunarPhase?.moonDistanceKm
 
-    val updatedText by vm.lunarUpdated.observeAsState("Unknown")
+    // Correct fields for rise/set
+    val moonriseText = lunarPhase?.moonRise?.let {
+        if (it == "-:-") "No moonrise today" else it
+    } ?: "N/A"
+
+    val moonsetText = lunarPhase?.moonSet ?: "N/A"
 
     val moonIconRes = vm.getMoonPhaseIconRes(lunarPhase?.moonPhase)
 
+    // UI Scaffold
     Scaffold(
         topBar = {
             TopAppBar(
@@ -118,7 +130,7 @@ fun LunarPhaseScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
-            // Loading / Error states
+            // Loading / Error
             when {
                 isLoading -> Text(
                     "Loading current lunar data...",
@@ -133,9 +145,7 @@ fun LunarPhaseScreen(
                 )
             }
 
-            // -----------------------
             // MAIN PHASE CARD
-            // -----------------------
             CelestiaPhaseCard {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -163,9 +173,7 @@ fun LunarPhaseScreen(
                 }
             }
 
-            // -----------------------
             // CURRENT DETAILS CARD
-            // -----------------------
             CelestiaPhaseCard {
 
                 Row(
@@ -194,10 +202,7 @@ fun LunarPhaseScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text(
-                            "Illumination",
-                            style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
-                        )
+                        Text("Illumination", style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray))
                         Text(
                             FormatUtils.formatPercent(illumination),
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
@@ -205,10 +210,7 @@ fun LunarPhaseScreen(
                     }
 
                     Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            "Moon Age",
-                            style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
-                        )
+                        Text("Moon Age", style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray))
                         Text(
                             FormatUtils.formatMoonAge(ageDays),
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
@@ -224,10 +226,7 @@ fun LunarPhaseScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text(
-                            "Distance",
-                            style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
-                        )
+                        Text("Distance", style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray))
                         Text(
                             distanceKm?.let { FormatUtils.formatDistance(it) } ?: "N/A",
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
@@ -235,10 +234,7 @@ fun LunarPhaseScreen(
                     }
 
                     Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            "Updated",
-                            style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
-                        )
+                        Text("Updated", style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray))
                         Text(
                             updatedText,
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
@@ -247,9 +243,7 @@ fun LunarPhaseScreen(
                 }
             }
 
-            // -----------------------
             // TODAY'S SCHEDULE CARD
-            // -----------------------
             CelestiaPhaseCard {
 
                 Row(
@@ -266,37 +260,29 @@ fun LunarPhaseScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                val moonriseText = lunarPhase?.moonrise?.let {
-                    if (it == "-:-") "No moonrise today" else it
-                } ?: "N/A"
-
-                val moonsetText = lunarPhase?.moonset ?: "N/A"
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Moonrise card
+                    // Moonrise
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFF2E335A))
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                            .padding(16.dp)
                     ) {
                         Text("Moonrise", color = Color.Gray, style = MaterialTheme.typography.labelMedium)
                         Text(moonriseText, color = Color.White, style = MaterialTheme.typography.titleMedium)
                     }
 
-                    // Moonset card
+                    // Moonset
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFF2E335A))
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                            .padding(16.dp)
                     ) {
                         Text("Moonset", color = Color.Gray, style = MaterialTheme.typography.labelMedium)
                         Text(moonsetText, color = Color.White, style = MaterialTheme.typography.titleMedium)
@@ -304,9 +290,7 @@ fun LunarPhaseScreen(
                 }
             }
 
-            // -----------------------------------------------------------------------------
-            // NEXT FULL / NEW MOON CARD
-            // -----------------------------------------------------------------------------
+            // UPCOMING PHASES
             CelestiaPhaseCard {
 
                 Text(
@@ -325,43 +309,31 @@ fun LunarPhaseScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
 
-                    // ---- Full Moon Card ----
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFF2E335A))
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                            .padding(16.dp)
                     ) {
+                        Text("Next Full Moon", color = Color.Gray, style = MaterialTheme.typography.labelMedium)
                         Text(
-                            text = "Next Full Moon",
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Text(
-                            text = String.format(Locale.US, "%.1f days", daysToFull),
+                            String.format(Locale.US, "%.1f days", daysToFull),
                             color = Color.White,
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
 
-                    // ---- New Moon Card ----
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFF2E335A))
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                            .padding(16.dp)
                     ) {
+                        Text("Next New Moon", color = Color.Gray, style = MaterialTheme.typography.labelMedium)
                         Text(
-                            text = "Next New Moon",
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Text(
-                            text = String.format(Locale.US, "%.1f days", daysToNew),
+                            String.format(Locale.US, "%.1f days", daysToNew),
                             color = Color.White,
                             style = MaterialTheme.typography.titleMedium
                         )

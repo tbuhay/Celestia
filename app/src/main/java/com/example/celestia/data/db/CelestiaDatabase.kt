@@ -6,8 +6,10 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.celestia.data.model.KpReading
 import com.example.celestia.data.model.IssReading
+import com.example.celestia.data.model.AsteroidApproach
+import com.example.celestia.data.model.LunarPhaseEntity
 
-@Database(entities = [KpReading::class, IssReading::class], version = 4, exportSchema = false)
+@Database(entities = [KpReading::class, IssReading::class, AsteroidApproach::class, LunarPhaseEntity::class], version = 6, exportSchema = false)
 abstract class CelestiaDatabase : RoomDatabase() {
 
     abstract fun dao(): CelestiaDao

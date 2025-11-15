@@ -23,6 +23,12 @@ android {
             "\"5dc8e0b10425455d8336e196019de244\""
         )
 
+        buildConfigField(
+            "String",
+            "NASA_API_KEY",
+            "\"egK18YDuM1Hsraro1mkSpW0NfxCsGwP5KgYbXw3t\""
+        )
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
