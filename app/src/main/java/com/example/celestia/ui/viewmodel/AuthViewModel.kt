@@ -1,10 +1,16 @@
 package com.example.celestia.ui.viewmodel
 
+import android.app.Application
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
+import com.example.celestia.data.store.ThemeManager
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 
 class AuthViewModel : ViewModel() {
 

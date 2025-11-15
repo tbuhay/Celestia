@@ -20,19 +20,29 @@ private val DarkColorScheme = darkColorScheme(
 
 private val LightColorScheme = lightColorScheme(
     primary = CelestiaBlue,
+    secondary = CelestiaPurple,
+    tertiary = CelestiaOrange,
+
     background = Color(0xFFF7F8FB),
     surface = Color.White,
-    onBackground = Color.Black,
-    onSurface = Color.Black
+
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+
+    onBackground = Color(0xFF0D0D10),
+    onSurface = Color(0xFF0D0D10)
 )
 
 @Composable
 fun CelestiaTheme(
-    darkTheme: Boolean = true,
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
+    val colors = if (darkTheme) DarkColorScheme else LightColorScheme
+
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+        colorScheme = colors,
         typography = CelestiaTypography,
         content = content
     )

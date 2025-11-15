@@ -193,14 +193,14 @@ fun KpIndexScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = cardShape,
                         colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                            containerColor = MaterialTheme.colorScheme.surface
                         )
                     ) {
                         Text(
                             text = "The Kp Index measures magnetic disturbances caused by solar activity.",
                             modifier = Modifier.padding(16.dp),
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                                color = MaterialTheme.colorScheme.onSurface
                             ),
                             textAlign = TextAlign.Center
                         )

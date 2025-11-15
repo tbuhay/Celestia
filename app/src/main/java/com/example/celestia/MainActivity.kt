@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,34 +18,47 @@ import com.example.celestia.ui.screens.LoginScreen
 import com.example.celestia.ui.screens.RegisterScreen
 import com.example.celestia.ui.screens.SettingsScreen
 import com.example.celestia.ui.theme.CelestiaTheme
+import com.example.celestia.ui.viewmodel.SettingsViewModel
 import com.google.firebase.FirebaseApp
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
         enableEdgeToEdge()
+
         setContent {
-            CelestiaTheme {
+
+            // ---------------------------------------------------------
+            // THEME from DataStore (SettingsViewModel)
+            // ---------------------------------------------------------
+            val settingsVM: SettingsViewModel = viewModel()
+            val darkModeEnabled = settingsVM.darkModeEnabled.observeAsState(initial = true).value
+
+            CelestiaTheme(darkTheme = darkModeEnabled) {
+
                 val navController = rememberNavController()
-                val isUserLoggedIn = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser != null
+                val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                val startDestination = if (firebaseUser != null) "home" else "login"
 
                 NavHost(
                     navController = navController,
-                    startDestination = if (isUserLoggedIn) "home" else "login"
+                    startDestination = startDestination
                 ) {
-                    // Auth Screens
+
+                    // ---------------------- AUTH ----------------------
                     composable("login") { LoginScreen(navController) }
                     composable("register") { RegisterScreen(navController) }
 
-                    // Main App Screens
+                    // ---------------------- MAIN SCREENS ----------------------
                     composable("home") { HomeScreen(navController, viewModel()) }
                     composable("kp_index") { KpIndexScreen(navController, viewModel()) }
                     composable("iss_location") { IssLocationScreen(navController, viewModel()) }
-                    composable("asteroid_tracking") { AsteroidTrackingScreen(navController, viewModel()) }
+                    composable("asteroid_tracking") { AsteroidTrackingScreen(navController) }
                     composable("lunar_phase") { LunarPhaseScreen(navController) }
 
-                    // Settings Screen(s)
+                    // ---------------------- SETTINGS ----------------------
                     composable("settings") { SettingsScreen(navController) }
                 }
             }
