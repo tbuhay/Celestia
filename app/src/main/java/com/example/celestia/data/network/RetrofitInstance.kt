@@ -1,5 +1,6 @@
 package com.example.celestia.data.network
 
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -8,6 +9,9 @@ object RetrofitInstance {
     private const val ISS_BASE_URL = "https://api.wheretheiss.at/"
     private const val IPGEO_BASE_URL = "https://api.ipgeolocation.io/"
     private const val NASA_BASE_URL = "https://api.nasa.gov/neo/rest/v1/"
+    private const val WIKI_BASE_URL = "https://en.wikipedia.org/api/rest_v1/"
+    private const val ASTRONAUT_URL = "http://api.open-notify.org/"
+
 
     val noaaApi: NoaaApi by lazy {
         Retrofit.Builder()
@@ -39,5 +43,26 @@ object RetrofitInstance {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(AsteroidApi::class.java)
+    }
+
+    val astronautApi: AstronautApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(ASTRONAUT_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(AstronautApi::class.java)
+    }
+
+    val wikiApi: WikipediaApi by lazy {
+        val client = OkHttpClient.Builder()
+            .addInterceptor(WikiInterceptor())
+            .build()
+
+        Retrofit.Builder()
+            .baseUrl("https://en.wikipedia.org/api/rest_v1/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(WikipediaApi::class.java)
     }
 }

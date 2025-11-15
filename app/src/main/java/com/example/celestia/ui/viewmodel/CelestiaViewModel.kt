@@ -6,9 +6,11 @@ import androidx.lifecycle.*
 import com.example.celestia.R
 import com.example.celestia.data.db.CelestiaDatabase
 import com.example.celestia.data.model.AsteroidApproach
+import com.example.celestia.data.model.Astronaut
 import com.example.celestia.data.model.KpHourlyGroup
 import com.example.celestia.data.model.KpReading
 import com.example.celestia.data.model.LunarPhaseEntity
+import com.example.celestia.data.model.WikiSummary
 import com.example.celestia.data.repository.CelestiaRepository
 import com.example.celestia.utils.TimeUtils
 import kotlinx.coroutines.launch
@@ -38,6 +40,11 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     // -------------------------------------------------------------------------
     val issReading = repo.issReading.asLiveData()
 
+    private val _selectedAstronaut = MutableLiveData<WikiSummary?>()
+    val selectedAstronaut: LiveData<WikiSummary?> = _selectedAstronaut
+
+    private val _astronauts = MutableLiveData<List<Astronaut>>()
+    val astronauts: LiveData<List<Astronaut>> = _astronauts
     // -------------------------------------------------------------------------
     // Lunar Phase (persistent in Room)
     // -------------------------------------------------------------------------
@@ -91,7 +98,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
 
-                // Lunar Phase (persistent)
+                // Lunar Phase
                 launch {
                     try {
                         _isLunarLoading.postValue(true)
@@ -128,7 +135,37 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     }
 
     // -------------------------------------------------------------------------
-    // LUNAR HELPERS (use LunarPhaseEntity? now)
+    // ASTRONAUT HELPERS
+    // -------------------------------------------------------------------------
+    fun loadAstronautDetails(name: String) {
+        viewModelScope.launch {
+            try {
+                Log.d("ASTRO", "Fetching Wikipedia for: $name")
+                val result = repo.getAstronautSummary(name)   // <-- pass RAW name
+                _selectedAstronaut.value = result
+            } catch (e: Exception) {
+                Log.e("ASTRO", "Wiki fetch failed", e)
+                _selectedAstronaut.value = null
+            }
+        }
+    }
+
+    fun fetchAstronauts() {
+        viewModelScope.launch {
+            try {
+                _astronauts.value = repo.loadAstronauts().filter { it.craft == "ISS" }
+            } catch (e: Exception) {
+                _astronauts.value = emptyList()
+            }
+        }
+    }
+
+    fun clearAstronaut() {
+        _selectedAstronaut.value = null
+    }
+
+    // -------------------------------------------------------------------------
+    // LUNAR HELPERS
     // -------------------------------------------------------------------------
     fun formatMoonPhaseName(raw: String?): String {
         if (raw.isNullOrBlank()) return "Unknown Phase"

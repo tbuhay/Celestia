@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
     implementation(libs.androidx.compose.ui.geometry)
+    implementation(libs.androidx.compose.foundation)
     ksp(libs.androidx.room.compiler)
     implementation(libs.gson)
     implementation(libs.retrofit)

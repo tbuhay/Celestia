@@ -11,9 +11,11 @@ import com.example.celestia.utils.TimeUtils
 import kotlinx.coroutines.flow.Flow
 import com.example.celestia.data.model.AsteroidApproach
 import com.example.celestia.data.model.AsteroidFeedResponse
+import com.example.celestia.data.model.Astronaut
 import com.example.celestia.data.model.NeoObjectDto
 import com.example.celestia.data.model.CloseApproachDto
 import com.example.celestia.data.model.LunarPhaseEntity
+import com.example.celestia.data.model.WikiSummary
 import java.time.LocalDate
 
 class CelestiaRepository(private val dao: CelestiaDao) {
@@ -33,6 +35,20 @@ class CelestiaRepository(private val dao: CelestiaDao) {
         }
     }
 
+    suspend fun getAstronautSummary(name: String): WikiSummary {
+        // 1. Replace spaces with underscores (Wikipedia uses this)
+        val underscored = name.replace(" ", "_")
+
+        // 2. URL-encode to prevent raw HTML fields from appearing
+        val encoded = java.net.URLEncoder.encode(underscored, "UTF-8")
+
+        // 3. Make the API call with the SAFE title
+        return RetrofitInstance.wikiApi.getSummary(encoded)
+    }
+
+    suspend fun loadAstronauts(): List<Astronaut> {
+        return RetrofitInstance.astronautApi.getAstronauts().people
+    }
 
     // -------------------------------------------------------------------------
     //  ISS (Live Position) — Persisted in Room
@@ -53,7 +69,10 @@ class CelestiaRepository(private val dao: CelestiaDao) {
             )
 
             dao.insertIssReading(reading)
-            Log.d("CelestiaRepo", "ISS data stored locally: ${reading.latitude}, ${reading.longitude}")
+            Log.d(
+                "CelestiaRepo",
+                "ISS data stored locally: ${reading.latitude}, ${reading.longitude}"
+            )
 
         } catch (e: Exception) {
             Log.e("CelestiaRepo", "Error refreshing ISS data", e)

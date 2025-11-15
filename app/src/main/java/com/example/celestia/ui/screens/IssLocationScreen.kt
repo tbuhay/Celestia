@@ -1,7 +1,9 @@
 package com.example.celestia.ui.screens
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -13,7 +15,6 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.*
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -25,8 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.celestia.utils.FormatUtils
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
+import com.example.celestia.utils.FormatUtils
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -38,8 +39,15 @@ fun IssLocationScreen(
     vm: CelestiaViewModel
 ) {
     val issReading by vm.issReading.observeAsState()
+    val astronauts by vm.astronauts.observeAsState(emptyList())   // dynamic list
+
     val cardShape = RoundedCornerShape(14.dp)
-    val scroll = rememberScrollState()
+    val scrollState = rememberScrollState()
+
+    // Load dynamic astronaut list exactly once
+    LaunchedEffect(Unit) {
+        vm.fetchAstronauts()
+    }
 
     Scaffold(
         topBar = {
@@ -47,15 +55,14 @@ fun IssLocationScreen(
                 title = {
                     Text(
                         "ISS Location",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        style = MaterialTheme.typography.titleLarge
+                            .copy(color = MaterialTheme.colorScheme.onSurface)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
@@ -69,15 +76,17 @@ fun IssLocationScreen(
     ) { padding ->
 
         Column(
-            modifier = Modifier
+            Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
-                .verticalScroll(scroll),
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // === Main ISS Data Card ===
+            // ------------------------------------------------------------------------------------
+            // MAIN ISS DATA CARD
+            // ------------------------------------------------------------------------------------
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -85,8 +94,7 @@ fun IssLocationScreen(
                 shape = cardShape,
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
-                ),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
+                )
             ) {
                 Column(
                     Modifier.padding(16.dp),
@@ -109,7 +117,7 @@ fun IssLocationScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Public,
+                                Icons.Default.Public,
                                 contentDescription = "ISS",
                                 tint = Color(0xFFB39DDB)
                             )
@@ -118,15 +126,10 @@ fun IssLocationScreen(
                         Spacer(Modifier.width(12.dp))
 
                         Column {
-                            Text(
-                                "International Space Station",
-                                style = MaterialTheme.typography.titleMedium
-                            )
+                            Text("International Space Station", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 "Live Position",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = Color.LightGray
-                                )
+                                style = MaterialTheme.typography.labelSmall.copy(color = Color.LightGray)
                             )
                         }
                     }
@@ -159,66 +162,92 @@ fun IssLocationScreen(
                     } else {
                         Text(
                             "No ISS data available yet.",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = Color.Gray
-                            )
+                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
                         )
                     }
                 }
             }
 
-            // === Map View ===
-            val issPosition = issReading?.let { LatLng(it.latitude, it.longitude) }
-
-            if (issPosition != null) {
-                val cameraPositionState = rememberCameraPositionState {
-                    position = CameraPosition.fromLatLngZoom(issPosition, 4.5f)
-                }
-
-                ElevatedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                    )
+            // ------------------------------------------------------------------------------------
+            // ASTRONAUT CARD — DYNAMIC LIST FROM OPEN NOTIFY API
+            // ------------------------------------------------------------------------------------
+            ElevatedCard(
+                Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Color(0x33FFFFFF), cardShape),
+                shape = cardShape
+            ) {
+                Column(
+                    Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    Text(
+                        "Astronauts on the ISS",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+
+                    when {
+                        astronauts.isEmpty() -> {
+                            Text("Loading crew...", color = Color.Gray)
+                        }
+
+                        else -> {
+                            astronauts.forEach { astro ->
+                                Text(
+                                    text = "• ${astro.name}",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val encoded = Uri.encode(astro.name)
+                                            navController.navigate("astronautDetail/$encoded")
+
+                                        },
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ------------------------------------------------------------------------------------
+            // MAP CARD
+            // ------------------------------------------------------------------------------------
+            val issPos = issReading?.let { LatLng(it.latitude, it.longitude) }
+
+            ElevatedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                )
+            ) {
+                if (issPos != null) {
+                    val cameraState = rememberCameraPositionState {
+                        position = CameraPosition.fromLatLngZoom(issPos, 4.5f)
+                    }
+
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraPositionState
+                        cameraPositionState = cameraState
                     ) {
                         Marker(
-                            state = MarkerState(position = issPosition),
+                            state = MarkerState(issPos),
                             title = "ISS",
-                            snippet = FormatUtils.formatCoordinates(
-                                issReading!!.latitude,
-                                issReading!!.longitude
-                            )
+                            snippet = FormatUtils.formatCoordinates(issReading!!.latitude, issReading!!.longitude)
                         )
                     }
-                }
-
-            } else {
-                ElevatedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                    )
-                ) {
+                } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "Loading ISS location...",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = Color.Gray
-                            )
-                        )
+                        Text("Loading ISS location...", color = Color.Gray)
                     }
                 }
             }
 
-            // === Info Card ===
+            // ------------------------------------------------------------------------------------
+            // INFO CARD
+            // ------------------------------------------------------------------------------------
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -229,81 +258,54 @@ fun IssLocationScreen(
                 )
             ) {
                 Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-
                     Text(
                         "About the ISS",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        modifier = Modifier.fillMaxWidth()
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
                     )
 
                     Text(
-                        text = "The International Space Station is a modular space station in low Earth orbit. " +
+                        "The International Space Station is a modular space station in low Earth orbit. " +
                                 "It serves as a microgravity research laboratory for many scientific fields.",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                         ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 2.dp),
                         textAlign = TextAlign.Start
                     )
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Surface(
                             modifier = Modifier
                                 .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(14.dp))
-                                .weight(1f)
-                                .clip(RoundedCornerShape(16.dp)),
-                            tonalElevation = 3.dp,
-                            color = MaterialTheme.colorScheme.surface
+                                .weight(1f),
+                            tonalElevation = 3.dp
                         ) {
                             Column(
                                 Modifier.padding(12.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(
-                                    "Mass",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White
-                                )
-                                Text(
-                                    "420,000 kg",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
+                                Text("Mass", color = Color.White)
+                                Text("420,000 kg", style = MaterialTheme.typography.titleMedium)
                             }
                         }
 
                         Surface(
                             modifier = Modifier
                                 .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(14.dp))
-                                .weight(1f)
-                                .clip(RoundedCornerShape(16.dp)),
-                            tonalElevation = 3.dp,
-                            color = MaterialTheme.colorScheme.surface
+                                .weight(1f),
+                            tonalElevation = 3.dp
                         ) {
                             Column(
                                 Modifier.padding(12.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(
-                                    "Launch Date",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White
-                                )
-                                Text(
-                                    "Nov 20, 1998",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
+                                Text("Launch Date", color = Color.White)
+                                Text("Nov 20, 1998", style = MaterialTheme.typography.titleMedium)
                             }
                         }
                     }
@@ -322,22 +324,14 @@ private fun StatRow(
     Row(verticalAlignment = Alignment.CenterVertically) {
 
         Icon(
-            icon,
-            contentDescription = null,
-            tint = Color(0xFFB39DDB)
+            icon, contentDescription = null, tint = Color(0xFFB39DDB)
         )
 
         Spacer(Modifier.width(12.dp))
 
         Column {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Text(label, style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray))
+            Text(value, style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
