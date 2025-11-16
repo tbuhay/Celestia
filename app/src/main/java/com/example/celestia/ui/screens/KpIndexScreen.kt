@@ -22,7 +22,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.celestia.utils.TimeUtils
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
+import com.example.celestia.ui.viewmodel.SettingsViewModel
 import com.example.celestia.R
+import com.example.celestia.utils.FormatUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,11 +32,20 @@ fun KpIndexScreen(
     navController: NavController,
     vm: CelestiaViewModel = viewModel()
 ) {
+    val settingsVM: SettingsViewModel = viewModel()
+
+    val use24h by settingsVM.timeFormat24H.observeAsState(true)
+
     val readings by vm.readings.observeAsState(emptyList())
     val lastUpdatedRaw by vm.lastUpdated.observeAsState("Never")
 
     val cardShape = RoundedCornerShape(14.dp)
-    val lastUpdated = lastUpdatedRaw
+
+    val lastUpdated = if (lastUpdatedRaw == "Never") {
+        "Never"
+    } else {
+        FormatUtils.convertTimeFormat(lastUpdatedRaw, use24h)
+    }
 
     Scaffold(
         topBar = {
@@ -294,7 +305,10 @@ fun KpIndexScreen(
                                 }
 
                                 Text(
-                                    text = TimeUtils.format(hour.toInstant().toString()),
+                                    text = FormatUtils.formatTime(
+                                        hour.toInstant().toEpochMilli(),
+                                        use24h
+                                    ),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                     ),

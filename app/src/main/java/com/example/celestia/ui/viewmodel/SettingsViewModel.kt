@@ -15,9 +15,18 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val darkModeEnabled: LiveData<Boolean> =
         themeManager.darkModeFlow.asLiveData()
 
+    val timeFormat24H: LiveData<Boolean> =
+        themeManager.timeFormat24H.asLiveData()
+
     fun setDarkMode(enabled: Boolean) {
         viewModelScope.launch {
             themeManager.setDarkMode(enabled)
+        }
+    }
+
+    fun setTimeFormat(use24h: Boolean) {
+        viewModelScope.launch {
+            themeManager.setTimeFormat(use24h)
         }
     }
 }

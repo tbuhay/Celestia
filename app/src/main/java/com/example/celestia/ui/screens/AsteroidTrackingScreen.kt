@@ -35,7 +35,6 @@ fun AsteroidTrackingScreen(
     // Raw asteroid data from Room
     val rawList = vm.asteroidList.observeAsState(emptyList()).value
 
-    // NEW: Option D filtering
     val featured = vm.getFeaturedAsteroid(rawList)
     val weekList = vm.getNext7DaysList(rawList)
 
@@ -74,8 +73,26 @@ fun AsteroidTrackingScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
-            // FEATURED ASTEROID (Option D logic)
+            // FEATURED ASTEROID
             if (featured != null) {
+
+                item {
+                    Text(
+                        "Featured Asteroid",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        "Most meaningful object based on size and close-approach distance",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    )
+                }
+
                 item {
                     FeaturedAsteroidCard(asteroid = featured)
                 }

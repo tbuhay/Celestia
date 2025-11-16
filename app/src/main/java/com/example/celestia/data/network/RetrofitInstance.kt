@@ -9,7 +9,6 @@ object RetrofitInstance {
     private const val ISS_BASE_URL = "https://api.wheretheiss.at/"
     private const val IPGEO_BASE_URL = "https://api.ipgeolocation.io/"
     private const val NASA_BASE_URL = "https://api.nasa.gov/neo/rest/v1/"
-    private const val WIKI_BASE_URL = "https://en.wikipedia.org/api/rest_v1/"
     private const val ASTRONAUT_URL = "http://api.open-notify.org/"
 
 
@@ -51,18 +50,5 @@ object RetrofitInstance {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(AstronautApi::class.java)
-    }
-
-    val wikiApi: WikipediaApi by lazy {
-        val client = OkHttpClient.Builder()
-            .addInterceptor(WikiInterceptor())
-            .build()
-
-        Retrofit.Builder()
-            .baseUrl("https://en.wikipedia.org/api/rest_v1/")
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(WikipediaApi::class.java)
     }
 }

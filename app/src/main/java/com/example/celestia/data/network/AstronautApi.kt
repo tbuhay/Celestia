@@ -8,6 +8,8 @@ interface AstronautApi {
     suspend fun getAstronauts(): AstronautResponse
 }
 
+
+
 data class AstronautResponse(
     val message: String,
     val number: Int,

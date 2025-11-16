@@ -1,5 +1,7 @@
 package com.example.celestia.ui.screens
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -24,6 +26,7 @@ import com.example.celestia.utils.FormatUtils
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.google.firebase.auth.FirebaseAuth
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -206,7 +209,7 @@ fun HomeScreen(
                                 .alignByBaseline()
                         )
                         Text(
-                            text = nextAsteroid?.name ?: "No data",
+                            text = featuredAsteroid?.name ?: "No data",
                             modifier = Modifier.alignByBaseline(),
                             style = MaterialTheme.typography.titleMedium.copy(
                                 color = MaterialTheme.colorScheme.onSurface

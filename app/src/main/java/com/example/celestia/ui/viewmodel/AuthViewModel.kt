@@ -9,6 +9,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.FirebaseUser
 import android.app.Activity
+import com.google.firebase.auth.userProfileChangeRequest
 
 class AuthViewModel : ViewModel() {
 
@@ -34,9 +35,11 @@ class AuthViewModel : ViewModel() {
     // --------------------------------------------------------
     fun login(email: String, password: String) {
         firebaseAuth.signInWithEmailAndPassword(email, password)
-            .addOnSuccessListener {
-                _isAuthenticated.value = true
-                _userName.value = firebaseAuth.currentUser?.displayName
+            .addOnSuccessListener { result ->
+                result.user?.reload()?.addOnSuccessListener {
+                    _isAuthenticated.value = true
+                    _userName.value = firebaseAuth.currentUser?.displayName
+                }
             }
             .addOnFailureListener { e ->
                 _errorMessage.value = e.message ?: "Login failed"
@@ -45,9 +48,20 @@ class AuthViewModel : ViewModel() {
 
     fun register(name: String, email: String, password: String) {
         firebaseAuth.createUserWithEmailAndPassword(email, password)
-            .addOnSuccessListener {
-                _isAuthenticated.value = true
-                _userName.value = name
+            .addOnSuccessListener { result ->
+                val user = result.user
+
+                // ⭐ IMPORTANT — Update Firebase profile with display name
+                val updates = userProfileChangeRequest {
+                    displayName = name
+                }
+
+                user?.updateProfile(updates)?.addOnCompleteListener {
+                    user.reload()  // Refresh cache
+
+                    _isAuthenticated.value = true
+                    _userName.value = user.displayName ?: name
+                }
             }
             .addOnFailureListener { e ->
                 _errorMessage.value = e.message ?: "Registration failed"

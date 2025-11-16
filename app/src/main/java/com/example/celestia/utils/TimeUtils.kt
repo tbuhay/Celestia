@@ -11,6 +11,30 @@ import java.util.*
 
 object TimeUtils {
 
+    fun parseIsoToMillis(value: String): Long {
+        return try {
+            Instant.parse(value).toEpochMilli()
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    fun formatWithPreference(raw: String?, use24h: Boolean): String {
+        val base = format(raw)  // existing parser -> "MMM dd, HH:mm"
+        return if (use24h) base else convertTo12Hour(base)
+    }
+
+    private fun convertTo12Hour(input: String): String {
+        return try {
+            val inputFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.US)
+            val outputFormat = SimpleDateFormat("MMM dd, h:mm a", Locale.US)
+            val date = inputFormat.parse(input) ?: return input
+            outputFormat.format(date)
+        } catch (e: Exception) {
+            input
+        }
+    }
+
     // -------------------------------------------------------------------------
     //  PUBLIC FUNCTION
     // -------------------------------------------------------------------------

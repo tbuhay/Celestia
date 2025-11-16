@@ -1,9 +1,9 @@
 package com.example.celestia.ui.screens
 
-import android.net.Uri
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.*
@@ -22,16 +23,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
+import com.example.celestia.ui.viewmodel.SettingsViewModel
 import com.example.celestia.utils.FormatUtils
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import androidx.compose.material.icons.filled.Refresh
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IssLocationScreen(
@@ -39,12 +45,15 @@ fun IssLocationScreen(
     vm: CelestiaViewModel
 ) {
     val issReading by vm.issReading.observeAsState()
-    val astronauts by vm.astronauts.observeAsState(emptyList())   // dynamic list
+    val astronautCount by vm.astronautCount.observeAsState(0)
+
+    val settingsVM: SettingsViewModel = viewModel()
+    val use24h = settingsVM.timeFormat24H.observeAsState(true).value
 
     val cardShape = RoundedCornerShape(14.dp)
     val scrollState = rememberScrollState()
 
-    // Load dynamic astronaut list exactly once
+    // Load crew list once
     LaunchedEffect(Unit) {
         vm.fetchAstronauts()
     }
@@ -55,8 +64,9 @@ fun IssLocationScreen(
                 title = {
                     Text(
                         "ISS Location",
-                        style = MaterialTheme.typography.titleLarge
-                            .copy(color = MaterialTheme.colorScheme.onSurface)
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     )
                 },
                 navigationIcon = {
@@ -64,6 +74,20 @@ fun IssLocationScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            vm.refresh()
+                            vm.fetchAstronauts()
+                        }
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Refresh ISS Data",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -84,9 +108,9 @@ fun IssLocationScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // ------------------------------------------------------------------------------------
+            // --------------------------------------------------------------------
             // MAIN ISS DATA CARD
-            // ------------------------------------------------------------------------------------
+            // --------------------------------------------------------------------
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -98,9 +122,10 @@ fun IssLocationScreen(
             ) {
                 Column(
                     Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
 
+                    // TITLE ROW
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
@@ -126,21 +151,28 @@ fun IssLocationScreen(
                         Spacer(Modifier.width(12.dp))
 
                         Column {
-                            Text("International Space Station", style = MaterialTheme.typography.titleMedium)
+                            Text("International Space Station",
+                                style = MaterialTheme.typography.titleMedium
+                            )
                             Text(
                                 "Live Position",
-                                style = MaterialTheme.typography.labelSmall.copy(color = Color.LightGray)
+                                style = MaterialTheme.typography.labelSmall
+                                    .copy(color = Color.LightGray)
                             )
                         }
                     }
 
-                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(Modifier.padding(vertical = 6.dp))
 
+                    // STATS
                     if (issReading != null) {
                         StatRow(
                             icon = Icons.Default.LocationOn,
                             label = "Coordinates",
-                            value = FormatUtils.formatCoordinates(issReading!!.latitude, issReading!!.longitude)
+                            value = FormatUtils.formatCoordinates(
+                                issReading!!.latitude,
+                                issReading!!.longitude
+                            )
                         )
                         StatRow(
                             icon = Icons.Default.Public,
@@ -152,13 +184,19 @@ fun IssLocationScreen(
                             label = "Velocity",
                             value = FormatUtils.formatVelocity(issReading!!.velocity)
                         )
+                        StatRow(
+                            icon = Icons.Default.People,
+                            label = "Crew",
+                            value = "$astronautCount aboard"
+                        )
+
+                        val formattedTime = FormatUtils.convertTimeFormat(
+                            issReading!!.timestamp,
+                            use24h
+                        )
 
                         Text(
-                            "Updated: ${issReading!!.timestamp}",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                        )
+                            "Updated: $formattedTime")
                     } else {
                         Text(
                             "No ISS data available yet.",
@@ -168,51 +206,9 @@ fun IssLocationScreen(
                 }
             }
 
-            // ------------------------------------------------------------------------------------
-            // ASTRONAUT CARD — DYNAMIC LIST FROM OPEN NOTIFY API
-            // ------------------------------------------------------------------------------------
-            ElevatedCard(
-                Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, Color(0x33FFFFFF), cardShape),
-                shape = cardShape
-            ) {
-                Column(
-                    Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        "Astronauts on the ISS",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-
-                    when {
-                        astronauts.isEmpty() -> {
-                            Text("Loading crew...", color = Color.Gray)
-                        }
-
-                        else -> {
-                            astronauts.forEach { astro ->
-                                Text(
-                                    text = "• ${astro.name}",
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            val encoded = Uri.encode(astro.name)
-                                            navController.navigate("astronautDetail/$encoded")
-
-                                        },
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------------------------
+            // --------------------------------------------------------------------
             // MAP CARD
-            // ------------------------------------------------------------------------------------
+            // --------------------------------------------------------------------
             val issPos = issReading?.let { LatLng(it.latitude, it.longitude) }
 
             ElevatedCard(
@@ -235,7 +231,10 @@ fun IssLocationScreen(
                         Marker(
                             state = MarkerState(issPos),
                             title = "ISS",
-                            snippet = FormatUtils.formatCoordinates(issReading!!.latitude, issReading!!.longitude)
+                            snippet = FormatUtils.formatCoordinates(
+                                issReading!!.latitude,
+                                issReading!!.longitude
+                            )
                         )
                     }
                 } else {
@@ -245,9 +244,9 @@ fun IssLocationScreen(
                 }
             }
 
-            // ------------------------------------------------------------------------------------
+            // --------------------------------------------------------------------
             // INFO CARD
-            // ------------------------------------------------------------------------------------
+            // --------------------------------------------------------------------
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -261,9 +260,12 @@ fun IssLocationScreen(
                     Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+
                     Text(
                         "About the ISS",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
                     )
 
                     Text(
@@ -274,41 +276,6 @@ fun IssLocationScreen(
                         ),
                         textAlign = TextAlign.Start
                     )
-
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(14.dp))
-                                .weight(1f),
-                            tonalElevation = 3.dp
-                        ) {
-                            Column(
-                                Modifier.padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text("Mass", color = Color.White)
-                                Text("420,000 kg", style = MaterialTheme.typography.titleMedium)
-                            }
-                        }
-
-                        Surface(
-                            modifier = Modifier
-                                .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(14.dp))
-                                .weight(1f),
-                            tonalElevation = 3.dp
-                        ) {
-                            Column(
-                                Modifier.padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text("Launch Date", color = Color.White)
-                                Text("Nov 20, 1998", style = MaterialTheme.typography.titleMedium)
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -317,21 +284,29 @@ fun IssLocationScreen(
 
 @Composable
 private fun StatRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
     value: String
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
 
         Icon(
-            icon, contentDescription = null, tint = Color(0xFFB39DDB)
+            icon,
+            contentDescription = null,
+            tint = Color(0xFFB39DDB)
         )
 
         Spacer(Modifier.width(12.dp))
 
         Column {
-            Text(label, style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray))
-            Text(value, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
     }
 }

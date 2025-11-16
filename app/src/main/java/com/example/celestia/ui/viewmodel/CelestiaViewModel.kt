@@ -1,7 +1,9 @@
 package com.example.celestia.ui.viewmodel
 
 import android.app.Application
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.*
 import com.example.celestia.R
 import com.example.celestia.data.db.CelestiaDatabase
@@ -10,7 +12,6 @@ import com.example.celestia.data.model.Astronaut
 import com.example.celestia.data.model.KpHourlyGroup
 import com.example.celestia.data.model.KpReading
 import com.example.celestia.data.model.LunarPhaseEntity
-import com.example.celestia.data.model.WikiSummary
 import com.example.celestia.data.repository.CelestiaRepository
 import com.example.celestia.utils.TimeUtils
 import kotlinx.coroutines.launch
@@ -40,11 +41,11 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     // -------------------------------------------------------------------------
     val issReading = repo.issReading.asLiveData()
 
-    private val _selectedAstronaut = MutableLiveData<WikiSummary?>()
-    val selectedAstronaut: LiveData<WikiSummary?> = _selectedAstronaut
-
     private val _astronauts = MutableLiveData<List<Astronaut>>()
     val astronauts: LiveData<List<Astronaut>> = _astronauts
+
+    private val _astronautCount = MutableLiveData<Int>()
+    val astronautCount: LiveData<Int> = _astronautCount
     // -------------------------------------------------------------------------
     // Lunar Phase (persistent in Room)
     // -------------------------------------------------------------------------
@@ -75,6 +76,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     // -------------------------------------------------------------------------
     // REFRESH ALL DATA
     // -------------------------------------------------------------------------
+    @RequiresApi(Build.VERSION_CODES.O)
     fun refresh() {
         viewModelScope.launch {
             try {
@@ -137,31 +139,20 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     // -------------------------------------------------------------------------
     // ASTRONAUT HELPERS
     // -------------------------------------------------------------------------
-    fun loadAstronautDetails(name: String) {
-        viewModelScope.launch {
-            try {
-                Log.d("ASTRO", "Fetching Wikipedia for: $name")
-                val result = repo.getAstronautSummary(name)   // <-- pass RAW name
-                _selectedAstronaut.value = result
-            } catch (e: Exception) {
-                Log.e("ASTRO", "Wiki fetch failed", e)
-                _selectedAstronaut.value = null
-            }
-        }
-    }
-
     fun fetchAstronauts() {
         viewModelScope.launch {
             try {
-                _astronauts.value = repo.loadAstronauts().filter { it.craft == "ISS" }
+                val response = repo.getAstronautsRaw()     // new call
+                val crew = response.people.filter { it.craft == "ISS" }
+
+                _astronauts.value = crew
+                _astronautCount.value = crew.size
+
             } catch (e: Exception) {
                 _astronauts.value = emptyList()
+                _astronautCount.value = 0
             }
         }
-    }
-
-    fun clearAstronaut() {
-        _selectedAstronaut.value = null
     }
 
     // -------------------------------------------------------------------------
@@ -210,16 +201,6 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             "LAST_QUARTER"    -> R.drawable.last_quarter_moon
             "WANING_CRESCENT" -> R.drawable.waning_crescent_moon
             else              -> R.drawable.full_moon
-        }
-    }
-
-    fun isWaxing(phase: String?): Boolean {
-        return when (phase?.uppercase()) {
-            "WAXING_CRESCENT",
-            "FIRST_QUARTER",
-            "WAXING_GIBBOUS",
-            "FULL_MOON" -> true
-            else -> false
         }
     }
 
@@ -305,12 +286,14 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
         return isBigEnough && isCloseEnough
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun isWithinNext7Days(dateString: String): Boolean {
         val today = LocalDate.now()
         val date = LocalDate.parse(dateString)
         return !date.isBefore(today) && !date.isAfter(today.plusDays(7))
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun getMeaningfulAsteroids(list: List<AsteroidApproach>): List<AsteroidApproach> {
         return list.filter { asteroid ->
             isMeaningful(asteroid) && isWithinNext7Days(asteroid.approachDate)
@@ -321,12 +304,14 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             )
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun getNext7DaysList(list: List<AsteroidApproach>): List<AsteroidApproach> {
         return list.filter { isMeaningful(it) && isWithinNext7Days(it.approachDate) }
             .sortedBy { LocalDate.parse(it.approachDate) }
     }
 
     // Featured asteroid for UI (Option D)
+    @RequiresApi(Build.VERSION_CODES.O)
     fun getFeaturedAsteroid(list: List<AsteroidApproach>): AsteroidApproach? {
         if (list.isEmpty()) return null
 

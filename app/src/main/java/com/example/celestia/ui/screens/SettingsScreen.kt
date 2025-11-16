@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
@@ -61,6 +62,7 @@ fun SettingsScreen(
 ) {
     // Observe Dark Mode setting
     val isDark by settingsVM.darkModeEnabled.observeAsState(true)
+    val use24h by settingsVM.timeFormat24H.observeAsState(true)
 
     Scaffold(
         topBar = {
@@ -139,6 +141,16 @@ fun SettingsScreen(
                         icon = Icons.Default.Refresh,
                         checked = false,
                         onCheckedChange = {}
+                    )
+
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+
+                    SettingsToggleRow(
+                        title = "24-Hour Time",
+                        subtitle = if (use24h) "Using 24-hour format" else "Using AM/PM format",
+                        icon = Icons.Default.AccessTime,
+                        checked = use24h,
+                        onCheckedChange = { settingsVM.setTimeFormat(it) }
                     )
                 }
             }

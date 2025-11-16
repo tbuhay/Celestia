@@ -26,12 +26,15 @@ import com.example.celestia.utils.FormatUtils
 import com.example.celestia.R
 import com.example.celestia.ui.theme.CelestiaYellow
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
+import com.example.celestia.ui.viewmodel.SettingsViewModel
 import java.util.Locale
+
 
 // -----------------------------------------------------------------------------
 // Phase Card
 // -----------------------------------------------------------------------------
 @Composable
+
 fun CelestiaPhaseCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
@@ -70,6 +73,9 @@ fun LunarPhaseScreen(
     val errorMessage by vm.lunarError.observeAsState()
     val updatedText by vm.lunarUpdated.observeAsState("Unknown")
 
+    val settingsVM: SettingsViewModel = viewModel()
+    val use24h = settingsVM.timeFormat24H.observeAsState(true).value
+
     // Load on launch
     LaunchedEffect(Unit) {
         vm.loadLunarPhase()
@@ -81,6 +87,8 @@ fun LunarPhaseScreen(
     val distanceKm = lunarPhase?.moonDistanceKm
     val moonriseText = lunarPhase?.moonRise ?: "N/A"
     val moonsetText = lunarPhase?.moonSet ?: "N/A"
+    val formattedMoonrise = FormatUtils.convertLunarTime(moonriseText, use24h)
+    val formattedMoonset = FormatUtils.convertLunarTime(moonsetText, use24h)
 
     val moonIconRes = vm.getMoonPhaseIconRes(lunarPhase?.moonPhase)
 
@@ -222,8 +230,10 @@ fun LunarPhaseScreen(
 
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Updated", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val formattedUpdated = FormatUtils.convertTimeFormat(updatedText, use24h)
+
                         Text(
-                            updatedText,
+                            formattedUpdated,
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -260,7 +270,7 @@ fun LunarPhaseScreen(
                             .padding(16.dp)
                     ) {
                         Text("Moonrise", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(moonriseText, color = MaterialTheme.colorScheme.onSurface)
+                        Text(formattedMoonrise, color = MaterialTheme.colorScheme.onSurface)
                     }
 
                     // Moonset
@@ -272,7 +282,7 @@ fun LunarPhaseScreen(
                             .padding(16.dp)
                     ) {
                         Text("Moonset", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(moonsetText, color = MaterialTheme.colorScheme.onSurface)
+                        Text(formattedMoonset, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }

@@ -1,6 +1,8 @@
 package com.example.celestia.data.repository
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import com.example.celestia.BuildConfig
 import com.example.celestia.data.db.CelestiaDao
 import com.example.celestia.data.model.IssReading
@@ -12,10 +14,8 @@ import kotlinx.coroutines.flow.Flow
 import com.example.celestia.data.model.AsteroidApproach
 import com.example.celestia.data.model.AsteroidFeedResponse
 import com.example.celestia.data.model.Astronaut
-import com.example.celestia.data.model.NeoObjectDto
-import com.example.celestia.data.model.CloseApproachDto
 import com.example.celestia.data.model.LunarPhaseEntity
-import com.example.celestia.data.model.WikiSummary
+import com.example.celestia.data.network.AstronautResponse
 import java.time.LocalDate
 
 class CelestiaRepository(private val dao: CelestiaDao) {
@@ -33,21 +33,6 @@ class CelestiaRepository(private val dao: CelestiaDao) {
         } catch (e: Exception) {
             Log.e("CelestiaRepo", "Error fetching NOAA data", e)
         }
-    }
-
-    suspend fun getAstronautSummary(name: String): WikiSummary {
-        // 1. Replace spaces with underscores (Wikipedia uses this)
-        val underscored = name.replace(" ", "_")
-
-        // 2. URL-encode to prevent raw HTML fields from appearing
-        val encoded = java.net.URLEncoder.encode(underscored, "UTF-8")
-
-        // 3. Make the API call with the SAFE title
-        return RetrofitInstance.wikiApi.getSummary(encoded)
-    }
-
-    suspend fun loadAstronauts(): List<Astronaut> {
-        return RetrofitInstance.astronautApi.getAstronauts().people
     }
 
     // -------------------------------------------------------------------------
@@ -77,6 +62,18 @@ class CelestiaRepository(private val dao: CelestiaDao) {
         } catch (e: Exception) {
             Log.e("CelestiaRepo", "Error refreshing ISS data", e)
         }
+    }
+
+    suspend fun loadAstronauts(): List<Astronaut> {
+        return RetrofitInstance.astronautApi.getAstronauts().people
+    }
+
+    suspend fun loadAstronautCount(): Int {
+        return RetrofitInstance.astronautApi.getAstronauts().number
+    }
+
+    suspend fun getAstronautsRaw(): AstronautResponse {
+        return RetrofitInstance.astronautApi.getAstronauts()
     }
 
 
@@ -126,6 +123,7 @@ class CelestiaRepository(private val dao: CelestiaDao) {
     val nextAsteroid: Flow<AsteroidApproach?> = dao.getNextAsteroid()
     val allAsteroids: Flow<List<AsteroidApproach>> = dao.getAllAsteroids()
 
+    @RequiresApi(Build.VERSION_CODES.O)
     suspend fun refreshAsteroids() {
         try {
             val today = LocalDate.now()

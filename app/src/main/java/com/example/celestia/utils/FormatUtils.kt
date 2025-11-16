@@ -1,5 +1,8 @@
 package com.example.celestia.utils
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -46,8 +49,41 @@ object FormatUtils {
         }
     }
 
+    fun formatTime(timestamp: Long, use24h: Boolean): String {
+        val pattern = if (use24h) "HH:mm" else "h:mm a"
+        val sdf = SimpleDateFormat(pattern, Locale.getDefault())
+        return sdf.format(Date(timestamp))
+    }
+
+    fun convertTimeFormat(input: String, use24h: Boolean): String {
+        val possibleFormats = listOf(
+            "MMM dd, HH:mm",            // Already formatted 24h
+            "MMM dd, h:mm a",           // Already formatted 12h
+            "yyyy-MM-dd'T'HH:mm:ss",    // NOAA + ISO without Z
+            "yyyy-MM-dd HH:mm:ss",      // fallback
+            "yyyy-MM-dd"                // date only
+        )
+
+        val parsedDate = possibleFormats.firstNotNullOfOrNull { pattern ->
+            try {
+                val sdf = java.text.SimpleDateFormat(pattern, java.util.Locale.US)
+                sdf.parse(input)
+            } catch (e: Exception) {
+                null
+            }
+        } ?: return input  // fallback
+
+        val outputPattern = if (use24h)
+            "MMM dd, HH:mm"
+        else
+            "MMM dd, h:mm a"
+
+        val outputFormat = java.text.SimpleDateFormat(outputPattern, java.util.Locale.US)
+        return outputFormat.format(parsedDate)
+    }
+
     // -------------------------------------------------------------------------
-    //  COORDINATE FORMATTING (Option A)
+    //  COORDINATE FORMATTING
     // -------------------------------------------------------------------------
     /**
      * Converts:
@@ -90,13 +126,32 @@ object FormatUtils {
     // -------------------------------------------------------------------------
     //  PERCENT / ILLUMINATION
     // -------------------------------------------------------------------------
-    fun formatPercent(raw: String?): String {
-        if (raw.isNullOrBlank()) return "N/A"
+    fun convertLunarTime(input: String, use24h: Boolean): String {
+        if (input.isBlank() || input == "N/A") return "N/A"
 
-        // Remove %, convert to double, abs() for waning cases
-        val clean = raw.replace("%", "").trim()
-        val value = clean.toDoubleOrNull() ?: return "N/A"
-        return "${formatNumber(abs(value))}%"
+        return try {
+            // API format is "HH:mm:ss.xxx"
+            val parts = input.split(":")
+            if (parts.size < 2) return input
+
+            val hour = parts[0].toInt()
+            val minute = parts[1].toInt()
+
+            if (use24h) {
+                String.format("%02d:%02d", hour, minute)
+            } else {
+                // Convert to 12-hour
+                val suffix = if (hour >= 12) "PM" else "AM"
+                val hour12 = when {
+                    hour == 0 -> 12
+                    hour > 12 -> hour - 12
+                    else -> hour
+                }
+                String.format("%d:%02d %s", hour12, minute, suffix)
+            }
+        } catch (e: Exception) {
+            input
+        }
     }
 
     fun formatPercent(raw: Double): String {
