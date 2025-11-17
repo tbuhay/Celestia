@@ -24,14 +24,17 @@ import com.example.celestia.R
 import com.example.celestia.ui.theme.*
 import com.example.celestia.utils.FormatUtils
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
+import com.example.celestia.ui.viewmodel.SettingsViewModel
 import com.google.firebase.auth.FirebaseAuth
+import java.util.Calendar
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    vm: CelestiaViewModel
+    vm: CelestiaViewModel,
+    settingsVM: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val readings by vm.readings.observeAsState(emptyList())
     val issReading by vm.issReading.observeAsState()
@@ -39,6 +42,7 @@ fun HomeScreen(
     val nextAsteroid by vm.nextAsteroid.observeAsState()
     val asteroidList = vm.asteroidList.observeAsState(emptyList()).value
     val featuredAsteroid = vm.getFeaturedAsteroid(asteroidList)
+    val refreshOnLaunch by settingsVM.refreshOnLaunch.observeAsState(false)
 
     val scrollState = rememberScrollState()
     val cardShape = RoundedCornerShape(14.dp)
@@ -48,12 +52,21 @@ fun HomeScreen(
 
     // Greeting logic
     val greeting = remember {
-        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-        when (hour) {
-            in 5..11 -> "Good morning"
-            in 12..16 -> "Good afternoon"
-            in 17..22 -> "Good evening"
-            else -> "Hello"
+        val cal = java.util.Calendar.getInstance()
+        val hour12 = cal.get(java.util.Calendar.HOUR)
+        val amPm = cal.get(java.util.Calendar.AM_PM)
+
+        when {
+            amPm == Calendar.AM && hour12 in 5..11 -> "Good morning"
+            amPm == Calendar.PM && hour12 in 0..4  -> "Good afternoon"
+            amPm == Calendar.PM && hour12 in 5..10 -> "Good evening"
+            else -> "Good night"
+        }
+    }
+
+    LaunchedEffect(refreshOnLaunch) {
+        if (refreshOnLaunch) {
+            vm.refresh()
         }
     }
 

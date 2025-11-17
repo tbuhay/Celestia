@@ -12,11 +12,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val themeManager = ThemeManager(application)
 
+    //-----------------------------------------
+    // DARK MODE
+    //-----------------------------------------
     val darkModeEnabled: LiveData<Boolean> =
         themeManager.darkModeFlow.asLiveData()
-
-    val timeFormat24H: LiveData<Boolean> =
-        themeManager.timeFormat24H.asLiveData()
 
     fun setDarkMode(enabled: Boolean) {
         viewModelScope.launch {
@@ -24,9 +24,35 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    //-----------------------------------------
+    // TIME FORMAT
+    //-----------------------------------------
+    val timeFormat24H: LiveData<Boolean> =
+        themeManager.timeFormat24H.asLiveData()
+
     fun setTimeFormat(use24h: Boolean) {
         viewModelScope.launch {
             themeManager.setTimeFormat(use24h)
+        }
+    }
+
+    //-----------------------------------------
+    // REFRESH ON APP LAUNCH (NEW)
+    //-----------------------------------------
+    val refreshOnLaunch: LiveData<Boolean> =
+        themeManager.refreshOnLaunchFlow.asLiveData()
+
+    fun setRefreshOnLaunch(enabled: Boolean) {
+        viewModelScope.launch {
+            themeManager.setRefreshOnLaunch(enabled)
+        }
+    }
+
+    val useDeviceLocation = themeManager.useDeviceLocationFlow.asLiveData()
+
+    fun setUseDeviceLocation(enabled: Boolean) {
+        viewModelScope.launch {
+            themeManager.setUseDeviceLocation(enabled)
         }
     }
 }

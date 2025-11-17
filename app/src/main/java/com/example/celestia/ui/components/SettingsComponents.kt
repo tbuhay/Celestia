@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,33 +31,49 @@ fun SettingsToggleRow(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // Left side: Icon + Title + Subtitle (this should wrap)
+        Row(
+            modifier = Modifier
+                .weight(1f)   // <-- KEY FIX: allows wrapping
+                .padding(end = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
-                icon,
+                imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(28.dp)
+                    .padding(end = 12.dp)
             )
-            Spacer(Modifier.width(12.dp))
 
-            Column {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 Text(
-                    title,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyLarge
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 )
+
                 Text(
-                    subtitle,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    maxLines = Int.MAX_VALUE    // <-- allow wrapping
                 )
             }
         }
 
+        // Right side toggle
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange

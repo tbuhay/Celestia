@@ -13,6 +13,8 @@ import com.example.celestia.data.model.KpHourlyGroup
 import com.example.celestia.data.model.KpReading
 import com.example.celestia.data.model.LunarPhaseEntity
 import com.example.celestia.data.repository.CelestiaRepository
+import com.example.celestia.data.store.ThemeKeys
+import com.example.celestia.data.store.themeDataStore
 import com.example.celestia.utils.TimeUtils
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -21,12 +23,18 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.abs
+import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 class CelestiaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = CelestiaDatabase.getInstance(application).dao()
     private val repo = CelestiaRepository(dao)
     private val prefs = application.getSharedPreferences("celestia_prefs", 0)
+
+    private val fusedLocationClient =
+        LocationServices.getFusedLocationProviderClient(application)
 
     // -------------------------------------------------------------------------
     // NOAA — Kp Index
@@ -104,8 +112,30 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                 launch {
                     try {
                         _isLunarLoading.postValue(true)
-                        repo.refreshLunarPhase(defaultLat, defaultLon)
-                        _lunarUpdated.postValue(currentLocalTime())
+                        val useDeviceLocation =
+                            getApplication<Application>()
+                                .themeDataStore
+                                .data
+                                .map { it[ThemeKeys.USE_DEVICE_LOCATION] ?: false }
+                                .first()
+
+                        if (useDeviceLocation) {
+                            getDeviceLocation(
+                                onResult = { lat, lon ->
+                                    viewModelScope.launch {
+                                        repo.refreshLunarPhase(lat, lon)
+                                    }
+                                },
+                                onError = {
+                                    viewModelScope.launch {
+                                        repo.refreshLunarPhase(defaultLat, defaultLon)
+                                    }
+                                }
+                            )
+                        } else {
+                            repo.refreshLunarPhase(defaultLat, defaultLon)
+                        }
+                        _lunarUpdated.postValue(System.currentTimeMillis().toString())
                         Log.d("CelestiaVM", "Lunar phase refreshed")
                     } catch (e: Exception) {
                         _lunarError.postValue("Lunar refresh failed")
@@ -211,7 +241,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
 
             try {
                 repo.refreshLunarPhase(latitude, longitude)
-                _lunarUpdated.postValue(currentLocalTime())
+                _lunarUpdated.postValue(System.currentTimeMillis().toString())
             } catch (e: Exception) {
                 _lunarError.postValue("Unable to load lunar data")
                 Log.e("CelestiaVM", "loadLunarPhase failed", e)
@@ -327,5 +357,22 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
 
         // Last fallback: closest in entire list
         return list.minByOrNull { it.missDistanceAu }
+    }
+
+    fun getDeviceLocation(
+        onResult: (lat: Double, lon: Double) -> Unit,
+        onError: () -> Unit
+    ) {
+        try {
+            fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                if (loc != null) {
+                    onResult(loc.latitude, loc.longitude)
+                } else {
+                    onError()
+                }
+            }
+        } catch (e: Exception) {
+            onError()
+        }
     }
 }

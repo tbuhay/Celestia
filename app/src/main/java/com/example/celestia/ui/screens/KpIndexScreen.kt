@@ -20,7 +20,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.celestia.utils.TimeUtils
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.example.celestia.ui.viewmodel.SettingsViewModel
 import com.example.celestia.R

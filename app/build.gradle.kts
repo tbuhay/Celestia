@@ -68,6 +68,7 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.androidx.compose.ui.geometry)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.play.services.location)
     ksp(libs.androidx.room.compiler)
     implementation(libs.gson)
     implementation(libs.retrofit)

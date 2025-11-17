@@ -3,6 +3,7 @@ package com.example.celestia.utils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -141,7 +142,7 @@ object FormatUtils {
                 String.format("%02d:%02d", hour, minute)
             } else {
                 // Convert to 12-hour
-                val suffix = if (hour >= 12) "PM" else "AM"
+                val suffix = if (hour >= 12) "p.m." else "a.m."
                 val hour12 = when {
                     hour == 0 -> 12
                     hour > 12 -> hour - 12
@@ -164,5 +165,26 @@ object FormatUtils {
     fun formatMoonAge(days: Double): String {
         val num = formatNumber(days)
         return "$num days"
+    }
+
+    fun formatUpdatedTimestamp(rawMillis: String?, use24h: Boolean): String {
+        if (rawMillis.isNullOrBlank()) return "Unknown"
+
+        return try {
+            val millis = rawMillis.toLong()
+
+            val date = Date(millis)
+            val sdf = if (use24h) {
+                SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
+            } else {
+                SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
+            }
+
+            sdf.timeZone = TimeZone.getDefault()
+            sdf.format(date)
+
+        } catch (e: Exception) {
+            "Unknown"
+        }
     }
 }

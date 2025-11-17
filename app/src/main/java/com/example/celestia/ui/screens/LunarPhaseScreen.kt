@@ -1,5 +1,6 @@
 package com.example.celestia.ui.screens
 
+import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -76,11 +77,6 @@ fun LunarPhaseScreen(
     val settingsVM: SettingsViewModel = viewModel()
     val use24h = settingsVM.timeFormat24H.observeAsState(true).value
 
-    // Load on launch
-    LaunchedEffect(Unit) {
-        vm.loadLunarPhase()
-    }
-
     val phaseName = vm.formatMoonPhaseName(lunarPhase?.moonPhase)
     val illumination = vm.parseIlluminationPercent(lunarPhase)
     val ageDays = vm.computeMoonAgeDays(lunarPhase)
@@ -91,6 +87,12 @@ fun LunarPhaseScreen(
     val formattedMoonset = FormatUtils.convertLunarTime(moonsetText, use24h)
 
     val moonIconRes = vm.getMoonPhaseIconRes(lunarPhase?.moonPhase)
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vm.refresh()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -230,7 +232,8 @@ fun LunarPhaseScreen(
 
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Updated", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        val formattedUpdated = FormatUtils.convertTimeFormat(updatedText, use24h)
+
+                        val formattedUpdated = FormatUtils.formatUpdatedTimestamp(updatedText, use24h)
 
                         Text(
                             formattedUpdated,
