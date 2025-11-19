@@ -285,10 +285,16 @@ fun SettingsScreen(
                         )
                     )
                     Text(
-                        "Version 1.0.0",
+                        "Version 1.0.1",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    )
+                    Text(
+                            "Developed by Tyler Buhay",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     )
                     Text(
                         "Built with data from NOAA, NASA, and other space agencies",
