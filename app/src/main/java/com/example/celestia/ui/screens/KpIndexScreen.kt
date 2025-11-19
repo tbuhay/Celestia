@@ -86,8 +86,7 @@ fun KpIndexScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            val latest = readings.firstOrNull()
+            val latest = vm.getLatestValidKp(readings)
 
             if (latest == null) {
                 item {

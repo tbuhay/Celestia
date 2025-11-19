@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.celestia.R
 import com.example.celestia.ui.theme.*
@@ -59,7 +60,7 @@ fun HomeScreen(
     val userName = user?.displayName ?: "Explorer"
 
     // -------------------------------------------------------------------------
-    // Greeting Logic (Extracted)
+    // Greeting Logic
     // -------------------------------------------------------------------------
     val greeting = remember { getGreetingMessage() }
 
@@ -141,12 +142,13 @@ fun HomeScreen(
             Spacer(Modifier.height(24.dp))
 
             // -----------------------------------------------------------------
-            // DATA CARDS (extracted composables)
+            // DATA CARDS
             // -----------------------------------------------------------------
             if (readings.isNotEmpty()) {
 
                 KpCard(
                     readings = readings,
+                    vm = vm,
                     cardShape = cardShape,
                     navController = navController
                 )
@@ -199,17 +201,18 @@ private fun getGreetingMessage(): String {
 }
 
 // -----------------------------------------------------------------------------
-// DASHBOARD CARD COMPOSABLES (EXACT SAME UI - JUST EXTRACTED)
+// DASHBOARD CARD COMPOSABLES
 // -----------------------------------------------------------------------------
 
 @Composable
 private fun KpCard(
     readings: List<com.example.celestia.data.model.KpReading>,
+    vm: CelestiaViewModel,
     cardShape: RoundedCornerShape,
     navController: NavController
 ) {
-    val latest = readings.first()
-    val kp = latest.estimatedKp
+    val latest = vm.getLatestValidKp(readings)
+    val kp = latest?.estimatedKp ?: 0.0
 
     val (status, color) = FormatUtils.getNoaaKpStatusAndColor(kp)
 
@@ -356,7 +359,7 @@ private fun LunarCard(
 }
 
 // -----------------------------------------------------------------------------
-// ORIGINAL CelestiaCard (unchanged UI)
+// ORIGINAL CelestiaCard
 // -----------------------------------------------------------------------------
 @Composable
 fun CelestiaCard(

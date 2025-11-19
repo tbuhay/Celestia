@@ -238,23 +238,66 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     fun groupKpReadingsHourly(readings: List<KpReading>): List<KpHourlyGroup> {
         if (readings.isEmpty()) return emptyList()
 
-        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
-        sdf.timeZone = TimeZone.getTimeZone("UTC")
+        val formatterUtc = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+
+        val localZone = TimeZone.getDefault()
 
         return readings
-            .groupBy { reading ->
-                val date = sdf.parse(reading.timestamp)!!
-                val epoch = date.time
-                Date(epoch - (epoch % (60 * 60 * 1000)))
+            .map { reading ->
+                // Parse NOAA UTC timestamp
+                val dateUtc = formatterUtc.parse(reading.timestamp)!!
+                val millisUtc = dateUtc.time
+
+                // Convert UTC → local time
+                val localCal = Calendar.getInstance(localZone).apply {
+                    timeInMillis = millisUtc
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                // Produce a clean local-hour key
+                val localHourStart = Date(localCal.timeInMillis)
+
+                Pair(localHourStart, reading)
             }
-            .map { (hour, group) ->
-                val values = group.map { it.estimatedKp }
+            .groupBy { it.first }
+            .map { (localHour, groupedItems) ->
+                val values = groupedItems.map { it.second.estimatedKp }
                 val avg = values.average()
                 val high = values.maxOrNull() ?: avg
                 val low = values.minOrNull() ?: avg
-                KpHourlyGroup(hour, avg, high, low)
+
+                KpHourlyGroup(
+                    hour = localHour,
+                    avg = avg,
+                    high = high,
+                    low = low
+                )
             }
             .sortedByDescending { it.hour }
+    }
+
+    fun getLatestValidKp(readings: List<KpReading>): KpReading? {
+        if (readings.isEmpty()) return null
+
+        // Convert timestamps to millis first
+        val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+
+        fun toMillis(ts: String): Long = formatter.parse(ts)?.time ?: 0L
+
+        val newestMillis = readings.maxOf { toMillis(it.timestamp) }
+
+        return readings.firstOrNull { reading ->
+            val millis = toMillis(reading.timestamp)
+            val isNewest = millis == newestMillis
+
+            !(isNewest && reading.estimatedKp == 0.0)
+        } ?: readings.firstOrNull()
     }
 
     // -------------------------------------------------------------------------

@@ -274,7 +274,7 @@ object FormatUtils {
      */
     fun getNoaaKpStatusAndColor(kp: Double): Pair<String, Color> {
         return when {
-            kp >= 8 -> "Severe/Extreme Storm" to Color(0xFF8B0000)  // deep red
+            kp >= 8 -> "Extreme Storm"        to Color(0xFF8B0000)  // deep red
             kp >= 7 -> "Severe Storm"         to Color(0xFFB71C1C)  // strong red
             kp >= 6 -> "Major Storm"          to Color(0xFFE53935)  // red-orange
             kp >= 5 -> "Minor Storm"          to Color(0xFFFB8C00)  // orange
