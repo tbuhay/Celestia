@@ -5,7 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -20,9 +20,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.celestia.R
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.example.celestia.ui.viewmodel.SettingsViewModel
-import com.example.celestia.R
 import com.example.celestia.utils.FormatUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,20 +32,24 @@ fun KpIndexScreen(
     vm: CelestiaViewModel = viewModel()
 ) {
     val settingsVM: SettingsViewModel = viewModel()
-
     val use24h by settingsVM.timeFormat24h.observeAsState(true)
 
     val readings by vm.readings.observeAsState(emptyList())
-    val grouped by vm.groupedKp.observeAsState(emptyList())   // ⭐ NEW
+    val grouped by vm.groupedKp.observeAsState(emptyList())
     val lastUpdatedRaw by vm.lastUpdated.observeAsState("Never")
 
     val cardShape = RoundedCornerShape(14.dp)
 
-    val lastUpdated = if (lastUpdatedRaw == "Never") {
-        "Never"
-    } else {
-        FormatUtils.convertTimeFormat(lastUpdatedRaw, use24h)
+    val lastUpdated = remember(lastUpdatedRaw, use24h) {
+        if (lastUpdatedRaw == "Never") {
+            "Never"
+        } else {
+            FormatUtils.convertTimeFormat(lastUpdatedRaw, use24h)
+        }
     }
+
+    // Pre-trim the grouped list for performance (e.g., last 12)
+    val recentGroups = remember(grouped) { grouped.take(12) }
 
     Scaffold(
         topBar = {
@@ -98,24 +102,11 @@ fun KpIndexScreen(
                 }
             } else {
 
+                // --- CURRENT KP (NOAA SCALE) ---
                 val kp = latest.estimatedKp
-                val status = when {
-                    kp >= 7 -> "Severe Storm"
-                    kp >= 5 -> "Active Storm"
-                    kp >= 3 -> "Active"
-                    else -> "Quiet"
-                }
+                val (status, statusColor, description) = FormatUtils.getNoaaKpInfo(kp)
 
-                val color = when {
-                    kp >= 7 -> Color(0xFFD32F2F)
-                    kp >= 5 -> Color(0xFFF57C00)
-                    kp >= 3 -> Color(0xFFFFEB3B)
-                    else -> Color(0xFF4CAF50)
-                }
-
-                // -----------------------------
-                // Current KP Card
-                // -----------------------------
+                // Current KP card
                 item {
                     ElevatedCard(
                         modifier = Modifier
@@ -133,40 +124,38 @@ fun KpIndexScreen(
                         ) {
 
                             Text(
-                                text = "Current Kp Index:",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    color = Color(0xFF2B8AD2)
+                                text = "Current Kp Index",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             )
 
                             Text(
                                 text = kp.toString(),
-                                style = MaterialTheme.typography.displayMedium.copy(
-                                    color = Color(0xFF2B8AD2)
+                                style = MaterialTheme.typography.headlineLarge.copy(
+                                    color = statusColor
                                 )
                             )
 
                             Text(
-                                text = "Status: $status",
+                                text = status,
                                 style = MaterialTheme.typography.titleMedium.copy(
-                                    color = color
+                                    color = statusColor
                                 )
                             )
 
                             Text(
-                                text = when {
-                                    kp >= 7 -> "Major geomagnetic storm — auroras visible far south!"
-                                    kp >= 5 -> "Aurora likely visible in northern skies."
-                                    kp >= 3 -> "Minor aurora possible near polar regions."
-                                    else -> "Calm conditions, no aurora expected."
-                                },
+                                text = description,
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
                                 )
                             )
 
+                            val high = readings.maxOfOrNull { it.estimatedKp } ?: kp
+                            val low = readings.minOfOrNull { it.estimatedKp } ?: kp
+
                             Text(
-                                text = "High: ${readings.maxOfOrNull { it.estimatedKp } ?: kp}  |  Low: ${readings.minOfOrNull { it.estimatedKp } ?: kp}",
+                                text = "High: $high  |  Low: $low",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                 )
@@ -182,12 +171,10 @@ fun KpIndexScreen(
                     }
                 }
 
-                // -----------------------------
-                // Kp scale
-                // -----------------------------
+                // Kp scale explanation (NOAA style)
                 item {
                     Text(
-                        text = "Kp Scale: 0–2 Quiet  |  3–4 Active  |  5–6 Storm  |  7–9 Severe Storm",
+                        text = "NOAA Kp Scale: 0–1 Quiet | 2–3 Unsettled | 4 Active | 5 Minor Storm | 6 Major Storm | 7–9 Severe/Extreme",
                         style = MaterialTheme.typography.labelSmall.copy(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         ),
@@ -196,9 +183,7 @@ fun KpIndexScreen(
                     )
                 }
 
-                // -----------------------------
-                // Explanation card
-                // -----------------------------
+                // Short explanation card
                 item {
                     ElevatedCard(
                         modifier = Modifier.fillMaxWidth(),
@@ -208,7 +193,7 @@ fun KpIndexScreen(
                         )
                     ) {
                         Text(
-                            text = "The Kp Index measures magnetic disturbances caused by solar activity.",
+                            text = "The Kp Index measures global geomagnetic activity caused by solar wind and coronal mass ejections. Higher values indicate stronger geomagnetic storms and higher aurora potential.",
                             modifier = Modifier.padding(16.dp),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = MaterialTheme.colorScheme.onSurface
@@ -218,9 +203,7 @@ fun KpIndexScreen(
                     }
                 }
 
-                // -----------------------------
-                // Recent readings
-                // -----------------------------
+                // Recent readings header
                 item {
                     Text(
                         "Recent Readings",
@@ -230,27 +213,20 @@ fun KpIndexScreen(
                     )
                 }
 
-                // ⭐ REPLACED: Uses precomputed values from ViewModel
-                items(grouped.take(12).withIndex().toList()) { indexed ->
-
-                    val (i, triple) = indexed
+                // Recent grouped readings (hourly aggregates)
+                itemsIndexed(recentGroups) { index, triple ->
 
                     val hour = triple.hour
                     val avg = triple.avg
                     val high = triple.high
                     val low = triple.low
 
-                    val colorItem = when {
-                        avg >= 7 -> Color(0xFFD32F2F)
-                        avg >= 5 -> Color(0xFFF57C00)
-                        avg >= 3 -> Color(0xFFFFEB3B)
-                        else -> Color(0xFF4CAF50)
-                    }
+                    val (hourStatus, hourColor) = FormatUtils.getNoaaKpStatusAndColor(avg)
 
-                    val arrowIconRes = if (i == grouped.lastIndex) {
+                    val arrowIconRes = if (index == recentGroups.lastIndex) {
                         R.drawable.ic_no_change
                     } else {
-                        val prevAvg = grouped[i + 1].avg
+                        val prevAvg = recentGroups[index + 1].avg
                         when {
                             avg > prevAvg -> R.drawable.ic_trend_up
                             avg < prevAvg -> R.drawable.ic_trend_down
@@ -267,7 +243,6 @@ fun KpIndexScreen(
                             containerColor = MaterialTheme.colorScheme.surface
                         )
                     ) {
-
                         Column(
                             Modifier
                                 .fillMaxWidth()
@@ -282,21 +257,16 @@ fun KpIndexScreen(
 
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
                                         text = String.format("%.2f", avg),
-                                        style = MaterialTheme.typography.displayMedium.copy(
-                                            color = colorItem
+                                        style = MaterialTheme.typography.headlineSmall.copy(
+                                            color = hourColor
                                         )
                                     )
                                     Text(
-                                        text = when {
-                                            avg >= 7 -> "Severe Storm"
-                                            avg >= 5 -> "Storm"
-                                            avg >= 3 -> "Active"
-                                            else -> "Quiet"
-                                        },
+                                        text = hourStatus,
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
@@ -343,3 +313,5 @@ fun KpIndexScreen(
         }
     }
 }
+
+

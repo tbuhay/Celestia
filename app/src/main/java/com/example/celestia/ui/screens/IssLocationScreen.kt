@@ -11,11 +11,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -25,7 +23,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -35,7 +32,6 @@ import com.example.celestia.utils.FormatUtils
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import androidx.compose.material.icons.filled.Refresh
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,82 +46,61 @@ fun IssLocationScreen(
     val settingsVM: SettingsViewModel = viewModel()
     val use24h = settingsVM.timeFormat24h.observeAsState(true).value
 
-    val cardShape = RoundedCornerShape(14.dp)
     val scrollState = rememberScrollState()
+    val cardShape = RoundedCornerShape(14.dp)
 
-    // Load crew list once
-    LaunchedEffect(Unit) {
-        vm.fetchAstronauts()
-    }
+    // Load astronaut count when screen enters
+    LaunchedEffect(Unit) { vm.fetchAstronauts() }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        "ISS Location",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    )
-                },
+                title = { Text("ISS Location") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            vm.refresh()
-                            vm.fetchAstronauts()
-                        }
-                    ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh ISS Data",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                    containerColor = MaterialTheme.colorScheme.background),
+                actions = {
+                    IconButton(onClick = {
+                        vm.refresh()
+                        vm.fetchAstronauts()
+                    }) {
+                        Icon(Icons.Default.Refresh, "Refresh")
+                    }
+                }
             )
         }
     ) { padding ->
 
         Column(
-            Modifier
-                .fillMaxSize()
+            modifier = Modifier
                 .padding(padding)
                 .padding(16.dp)
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // --------------------------------------------------------------------
+            // ---------------------------------------------------------------------
             // MAIN ISS DATA CARD
-            // --------------------------------------------------------------------
+            // ---------------------------------------------------------------------
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, Color(0x33FFFFFF), cardShape),
                 shape = cardShape,
                 colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
                 )
             ) {
                 Column(
-                    Modifier.padding(16.dp),
+                    modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
 
-                    // TITLE ROW
+                    // HEADER
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
@@ -143,7 +118,7 @@ fun IssLocationScreen(
                         ) {
                             Icon(
                                 Icons.Default.Public,
-                                contentDescription = "ISS",
+                                contentDescription = null,
                                 tint = Color(0xFFB39DDB)
                             )
                         }
@@ -151,74 +126,73 @@ fun IssLocationScreen(
                         Spacer(Modifier.width(12.dp))
 
                         Column {
-                            Text("International Space Station",
-                                style = MaterialTheme.typography.titleMedium
-                            )
+                            Text("International Space Station", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 "Live Position",
-                                style = MaterialTheme.typography.labelSmall
-                                    .copy(color = Color.LightGray)
+                                style = MaterialTheme.typography.labelSmall.copy(color = Color.LightGray)
                             )
                         }
                     }
 
-                    HorizontalDivider(Modifier.padding(vertical = 6.dp))
+                    HorizontalDivider()
 
-                    // STATS
-                    if (issReading != null) {
+                    // DATA
+                    issReading?.let { reading ->
+
                         StatRow(
                             icon = Icons.Default.LocationOn,
                             label = "Coordinates",
-                            value = FormatUtils.formatCoordinates(
-                                issReading!!.latitude,
-                                issReading!!.longitude
-                            )
+                            value = FormatUtils.formatCoordinates(reading.latitude, reading.longitude)
                         )
+
                         StatRow(
                             icon = Icons.Default.Public,
                             label = "Altitude",
-                            value = FormatUtils.formatAltitude(issReading!!.altitude)
+                            value = FormatUtils.formatAltitude(reading.altitude)
                         )
+
                         StatRow(
                             icon = Icons.Default.Speed,
                             label = "Velocity",
-                            value = FormatUtils.formatVelocity(issReading!!.velocity)
+                            value = FormatUtils.formatVelocity(reading.velocity)
                         )
+
                         StatRow(
                             icon = Icons.Default.People,
                             label = "Crew",
                             value = "$astronautCount aboard"
                         )
 
-                        val formattedTime = FormatUtils.convertTimeFormat(
-                            issReading!!.timestamp,
-                            use24h
-                        )
+                        val formattedTime = FormatUtils.convertTimeFormat(reading.timestamp, use24h)
 
                         Text(
-                            "Updated: $formattedTime")
-                    } else {
-                        Text(
-                            "No ISS data available yet.",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
+                            "Updated: $formattedTime",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
+
+                    } ?: Text(
+                        "No ISS data available yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
                 }
             }
 
-            // --------------------------------------------------------------------
+            // ---------------------------------------------------------------------
             // MAP CARD
-            // --------------------------------------------------------------------
-            val issPos = issReading?.let { LatLng(it.latitude, it.longitude) }
+            // ---------------------------------------------------------------------
+            val issPos = remember(issReading) {
+                issReading?.let { LatLng(it.latitude, it.longitude) }
+            }
 
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                )
+                shape = cardShape
             ) {
+
                 if (issPos != null) {
                     val cameraState = rememberCameraPositionState {
                         position = CameraPosition.fromLatLngZoom(issPos, 4.5f)
@@ -238,34 +212,28 @@ fun IssLocationScreen(
                         )
                     }
                 } else {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Loading ISS location...", color = Color.Gray)
                     }
                 }
             }
 
-            // --------------------------------------------------------------------
+            // ---------------------------------------------------------------------
             // INFO CARD
-            // --------------------------------------------------------------------
+            // ---------------------------------------------------------------------
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(14.dp)),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                    .border(1.dp, Color(0x33FFFFFF), cardShape),
+                shape = cardShape
             ) {
                 Column(
-                    Modifier.padding(16.dp),
+                    modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-
                     Text(
                         "About the ISS",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
                     )
 
                     Text(
@@ -273,8 +241,7 @@ fun IssLocationScreen(
                                 "It serves as a microgravity research laboratory for many scientific fields.",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
-                        ),
-                        textAlign = TextAlign.Start
+                        )
                     )
                 }
             }
@@ -299,14 +266,8 @@ private fun StatRow(
         Spacer(Modifier.width(12.dp))
 
         Column {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Text(label, style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray))
+            Text(value, style = MaterialTheme.typography.bodyLarge)
         }
     }
 }

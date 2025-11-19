@@ -75,26 +75,31 @@ fun LunarPhaseScreen(
     val errorMessage by vm.lunarError.observeAsState()
     val updatedText by vm.lunarUpdated.observeAsState("Unknown")
 
+// User preferences
     val settingsVM: SettingsViewModel = viewModel()
     val use24h = settingsVM.timeFormat24h.observeAsState(true).value
 
+// Phase properties
     val phaseName = LunarHelper.formatMoonPhaseName(lunarPhase?.moonPhase)
     val illumination = LunarHelper.parseIlluminationPercent(lunarPhase)
     val ageDays = vm.getMoonAge()
     val distanceKm = lunarPhase?.moonDistanceKm
-    val moonriseText = lunarPhase?.moonRise ?: "N/A"
-    val moonsetText = lunarPhase?.moonSet ?: "N/A"
-    val formattedMoonrise = FormatUtils.convertLunarTime(moonriseText, use24h)
-    val formattedMoonset = FormatUtils.convertLunarTime(moonsetText, use24h)
 
+// Rise/Set
+    val moonriseRaw = lunarPhase?.moonRise ?: "N/A"
+    val moonsetRaw = lunarPhase?.moonSet ?: "N/A"
+    val formattedMoonrise = FormatUtils.convertLunarTime(moonriseRaw, use24h)
+    val formattedMoonset = FormatUtils.convertLunarTime(moonsetRaw, use24h)
+
+// Icon
     val moonIconRes = vm.getMoonPhaseIconRes(lunarPhase?.moonPhase)
 
+// Refresh on screen load
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vm.refresh()
         }
     }
-
     Scaffold(
         topBar = {
             TopAppBar(

@@ -29,6 +29,9 @@ import com.example.celestia.utils.LunarHelper
 import com.google.firebase.auth.FirebaseAuth
 import java.util.Calendar
 
+// -----------------------------------------------------------------------------
+// HOME SCREEN
+// -----------------------------------------------------------------------------
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,40 +40,39 @@ fun HomeScreen(
     vm: CelestiaViewModel,
     settingsVM: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
+    // -------------------------------------------------------------------------
+    // State Observers
+    // -------------------------------------------------------------------------
     val readings by vm.readings.observeAsState(emptyList())
     val issReading by vm.issReading.observeAsState()
     val lunarPhase by vm.lunarPhase.observeAsState()
     val nextAsteroid by vm.nextAsteroid.observeAsState()
-    val asteroidList = vm.asteroidList.observeAsState(emptyList()).value
-    val featuredAsteroid = vm.getFeaturedAsteroid(asteroidList)
+    val asteroidList by vm.asteroidList.observeAsState(emptyList())
     val refreshOnLaunch by settingsVM.refreshOnLaunchEnabled.observeAsState(false)
 
+    val featuredAsteroid = vm.getFeaturedAsteroid(asteroidList)
     val scrollState = rememberScrollState()
     val cardShape = RoundedCornerShape(14.dp)
 
+    // User
     val user = FirebaseAuth.getInstance().currentUser
     val userName = user?.displayName ?: "Explorer"
 
-    // Greeting logic
-    val greeting = remember {
-        val cal = java.util.Calendar.getInstance()
-        val hour12 = cal.get(java.util.Calendar.HOUR)
-        val amPm = cal.get(java.util.Calendar.AM_PM)
+    // -------------------------------------------------------------------------
+    // Greeting Logic (Extracted)
+    // -------------------------------------------------------------------------
+    val greeting = remember { getGreetingMessage() }
 
-        when {
-            amPm == Calendar.AM && hour12 in 5..11 -> "Good morning"
-            amPm == Calendar.PM && hour12 in 0..4  -> "Good afternoon"
-            amPm == Calendar.PM && hour12 in 5..10 -> "Good evening"
-            else -> "Good night"
-        }
-    }
-
+    // -------------------------------------------------------------------------
+    // Refresh on Launch
+    // -------------------------------------------------------------------------
     LaunchedEffect(refreshOnLaunch) {
-        if (refreshOnLaunch) {
-            vm.refresh()
-        }
+        if (refreshOnLaunch) vm.refresh()
     }
 
+    // -------------------------------------------------------------------------
+    // Scaffold
+    // -------------------------------------------------------------------------
     Scaffold(
         topBar = {
             TopAppBar(
@@ -108,6 +110,9 @@ fun HomeScreen(
         }
     ) { padding ->
 
+        // ---------------------------------------------------------------------
+        // Screen Content
+        // ---------------------------------------------------------------------
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -135,143 +140,36 @@ fun HomeScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // ------------ Data Section ------------
+            // -----------------------------------------------------------------
+            // DATA CARDS (extracted composables)
+            // -----------------------------------------------------------------
             if (readings.isNotEmpty()) {
-                val latest = readings.first()
-                val kp = latest.estimatedKp
-                val status = when {
-                    kp >= 7 -> "Severe Storm"
-                    kp >= 5 -> "Active Storm"
-                    kp >= 3 -> "Active"
-                    else -> "Quiet"
-                }
 
-                // ---------- KP INDEX CARD ----------
-                CelestiaCard(
-                    iconRes = R.drawable.ic_kp_beat,
-                    iconTint = CelestiaSkyBlue,
-                    title = "KP Index",
-                    mainRow = {
-                        Text(
-                            text = kp.toString(),
-                            modifier = Modifier.alignByBaseline(),
-                            style = MaterialTheme.typography.displayMedium.copy(
-                                color = when {
-                                    kp >= 7 -> Color(0xFFD32F2F)
-                                    kp >= 5 -> Color(0xFFF57C00)
-                                    kp >= 3 -> Color(0xFFFFEB3B)
-                                    else -> Color(0xFF4CAF50)
-                                }
-                            )
-                        )
-                        Text(
-                            text = status,
-                            modifier = Modifier.alignByBaseline(),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                        )
-                    },
-                    description = "Current geomagnetic activity level",
-                    shape = cardShape,
-                    onClick = { navController.navigate("kp_index") }
+                KpCard(
+                    readings = readings,
+                    cardShape = cardShape,
+                    navController = navController
                 )
 
-                // ---------- ISS CARD ----------
-                CelestiaCard(
-                    iconRes = R.drawable.ic_space_station,
-                    iconTint = CelestiaPurple,
-                    title = "ISS Location",
-                    mainRow = {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_map_pin),
-                            contentDescription = "Map Pin",
-                            tint = CelestiaPurple,
-                            modifier = Modifier
-                                .size(18.dp)
-                                .alignByBaseline()
-                        )
-                        Text(
-                            text = issReading?.let {
-                                FormatUtils.formatCoordinates(it.latitude, it.longitude)
-                            } ?: "--° N, --° W",
-                            modifier = Modifier.alignByBaseline(),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        )
-                    },
-                    description = issReading?.let {
-                        "Altitude: ${FormatUtils.formatAltitude(it.altitude)} | Velocity: ${FormatUtils.formatVelocity(it.velocity)}"
-                    } ?: "Altitude: -- km | Velocity: -- km/h",
-                    shape = cardShape,
-                    onClick = { navController.navigate("iss_location") }
+                IssCard(
+                    issReading = issReading,
+                    cardShape = cardShape,
+                    navController = navController
                 )
 
-                // ---------- ASTEROID CARD ----------
-                CelestiaCard(
-                    iconRes = R.drawable.ic_asteroid,
-                    iconTint = CelestiaOrange,
-                    title = "Asteroid Tracking",
-                    mainRow = {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_calendar),
-                            contentDescription = "Asteroid Calendar",
-                            tint = CelestiaOrange,
-                            modifier = Modifier
-                                .size(18.dp)
-                                .alignByBaseline()
-                        )
-                        Text(
-                            text = featuredAsteroid?.name ?: "No data",
-                            modifier = Modifier.alignByBaseline(),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        )
-                    },
-                    description = nextAsteroid?.let {
-                        val date = it.approachDate
-                        val distance = String.format("%.3f AU", it.missDistanceAu)
-                        "Approach: $date | $distance"
-                    } ?: "Tap Reload to fetch asteroid data.",
-                    shape = cardShape,
-                    onClick = { navController.navigate("asteroid_tracking") }
+                AsteroidCard(
+                    featuredAsteroid = featuredAsteroid,
+                    nextAsteroid = nextAsteroid,
+                    cardShape = cardShape,
+                    navController = navController
                 )
 
-                // ---------- LUNAR CARD ----------
-                val illumination = lunarPhase?.let { LunarHelper.parseIlluminationPercent(it) }
-                val moonAge = LunarHelper.getMoonAge()
-
-                CelestiaCard(
-                    iconRes = R.drawable.ic_moon,
-                    iconTint = CelestiaYellow,
-                    title = "Lunar Phase",
-                    mainRow = {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_full_moon),
-                            contentDescription = "Lunar Icon",
-                            tint = CelestiaYellow,
-                            modifier = Modifier
-                                .size(18.dp)
-                                .alignByBaseline()
-                        )
-                        Text(
-                            text = LunarHelper.formatMoonPhaseName(lunarPhase?.moonPhase ?: "Loading..."),
-                            modifier = Modifier.alignByBaseline(),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        )
-                    },
-                    description =
-                        if (lunarPhase != null)
-                            "Illumination: ${FormatUtils.formatPercent(illumination ?: 0.0)} | Age: ${FormatUtils.formatMoonAge(moonAge ?: 0.0)}"
-                        else
-                            "Loading lunar data...",
-                    shape = cardShape,
-                    onClick = { navController.navigate("lunar_phase") }
+                LunarCard(
+                    lunarPhase = lunarPhase,
+                    cardShape = cardShape,
+                    navController = navController
                 )
+
             } else {
                 Text(
                     text = "No data loaded yet. Tap Reload to fetch current conditions.",
@@ -284,6 +182,182 @@ fun HomeScreen(
     }
 }
 
+// -----------------------------------------------------------------------------
+// HELPERS
+// -----------------------------------------------------------------------------
+private fun getGreetingMessage(): String {
+    val cal = Calendar.getInstance()
+    val hour12 = cal.get(Calendar.HOUR)
+    val amPm = cal.get(Calendar.AM_PM)
+
+    return when {
+        amPm == Calendar.AM && hour12 in 5..11 -> "Good morning"
+        amPm == Calendar.PM && hour12 in 0..4  -> "Good afternoon"
+        amPm == Calendar.PM && hour12 in 5..10 -> "Good evening"
+        else -> "Good night"
+    }
+}
+
+// -----------------------------------------------------------------------------
+// DASHBOARD CARD COMPOSABLES (EXACT SAME UI - JUST EXTRACTED)
+// -----------------------------------------------------------------------------
+
+@Composable
+private fun KpCard(
+    readings: List<com.example.celestia.data.model.KpReading>,
+    cardShape: RoundedCornerShape,
+    navController: NavController
+) {
+    val latest = readings.first()
+    val kp = latest.estimatedKp
+
+    val (status, color) = FormatUtils.getNoaaKpStatusAndColor(kp)
+
+    CelestiaCard(
+        iconRes = R.drawable.ic_kp_beat,
+        iconTint = CelestiaSkyBlue,
+        title = "KP Index",
+        mainRow = {
+            Text(
+                text = kp.toString(),
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.displayMedium.copy(
+                    color = color
+                )
+            )
+            Text(
+                text = status,
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            )
+        },
+        description = "Current geomagnetic activity level",
+        shape = cardShape,
+        onClick = { navController.navigate("kp_index") }
+    )
+}
+
+@Composable
+private fun IssCard(
+    issReading: com.example.celestia.data.model.IssReading?,
+    cardShape: RoundedCornerShape,
+    navController: NavController
+) {
+    CelestiaCard(
+        iconRes = R.drawable.ic_space_station,
+        iconTint = CelestiaPurple,
+        title = "ISS Location",
+        mainRow = {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_map_pin),
+                contentDescription = "Map Pin",
+                tint = CelestiaPurple,
+                modifier = Modifier
+                    .size(18.dp)
+                    .alignByBaseline()
+            )
+            Text(
+                text = issReading?.let {
+                    FormatUtils.formatCoordinates(it.latitude, it.longitude)
+                } ?: "--° N, --° W",
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        description = issReading?.let {
+            "Altitude: ${FormatUtils.formatAltitude(it.altitude)} | Velocity: ${FormatUtils.formatVelocity(it.velocity)}"
+        } ?: "Altitude: -- km | Velocity: -- km/h",
+        shape = cardShape,
+        onClick = { navController.navigate("iss_location") }
+    )
+}
+
+@Composable
+private fun AsteroidCard(
+    featuredAsteroid: com.example.celestia.data.model.AsteroidApproach?,
+    nextAsteroid: com.example.celestia.data.model.AsteroidApproach?,
+    cardShape: RoundedCornerShape,
+    navController: NavController
+) {
+    CelestiaCard(
+        iconRes = R.drawable.ic_asteroid,
+        iconTint = CelestiaOrange,
+        title = "Asteroid Tracking",
+        mainRow = {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_calendar),
+                contentDescription = "Asteroid Calendar",
+                tint = CelestiaOrange,
+                modifier = Modifier
+                    .size(18.dp)
+                    .alignByBaseline()
+            )
+            Text(
+                text = featuredAsteroid?.name ?: "No data",
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        description =
+            nextAsteroid?.let {
+                val date = it.approachDate
+                val distance = String.format("%.3f AU", it.missDistanceAu)
+                "Approach: $date | $distance"
+            } ?: "Tap Reload to fetch asteroid data.",
+        shape = cardShape,
+        onClick = { navController.navigate("asteroid_tracking") }
+    )
+}
+
+@Composable
+private fun LunarCard(
+    lunarPhase: com.example.celestia.data.model.LunarPhaseEntity?,
+    cardShape: RoundedCornerShape,
+    navController: NavController
+) {
+    val illumination = lunarPhase?.let { LunarHelper.parseIlluminationPercent(it) }
+    val moonAge = LunarHelper.getMoonAge()
+
+    CelestiaCard(
+        iconRes = R.drawable.ic_moon,
+        iconTint = CelestiaYellow,
+        title = "Lunar Phase",
+        mainRow = {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_full_moon),
+                contentDescription = "Lunar Icon",
+                tint = CelestiaYellow,
+                modifier = Modifier
+                    .size(18.dp)
+                    .alignByBaseline()
+            )
+            Text(
+                text = LunarHelper.formatMoonPhaseName(lunarPhase?.moonPhase ?: "Loading..."),
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        description =
+            if (lunarPhase != null)
+                "Illumination: ${FormatUtils.formatPercent(illumination ?: 0.0)} | Age: ${FormatUtils.formatMoonAge(moonAge ?: 0.0)}"
+            else
+                "Loading lunar data...",
+        shape = cardShape,
+        onClick = { navController.navigate("lunar_phase") }
+    )
+}
+
+// -----------------------------------------------------------------------------
+// ORIGINAL CelestiaCard (unchanged UI)
+// -----------------------------------------------------------------------------
 @Composable
 fun CelestiaCard(
     iconRes: Int,
@@ -320,7 +394,6 @@ fun CelestiaCard(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
 
-            // Title Row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -340,14 +413,12 @@ fun CelestiaCard(
                 )
             }
 
-            // Middle Row (dynamic)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.padding(start = 8.dp),
                 content = mainRow
             )
 
-            // Description
             Text(
                 text = description,
                 modifier = Modifier.padding(start = 8.dp),

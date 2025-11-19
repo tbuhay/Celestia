@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -22,6 +21,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.celestia.R
 import com.example.celestia.data.model.AsteroidApproach
+import com.example.celestia.ui.theme.CelestiaHazardRed
+import com.example.celestia.ui.theme.CelestiaHazardRedLight
+import com.example.celestia.ui.theme.TextPrimary
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -32,11 +34,12 @@ fun AsteroidTrackingScreen(
     navController: NavController,
     vm: CelestiaViewModel = viewModel()
 ) {
-    // Raw asteroid data from Room
     val rawList = vm.asteroidList.observeAsState(emptyList()).value
 
     val featured = vm.getFeaturedAsteroid(rawList)
     val weekList = vm.getNext7DaysList(rawList)
+
+    val cardShape = RoundedCornerShape(20.dp)
 
     Scaffold(
         topBar = {
@@ -44,17 +47,14 @@ fun AsteroidTrackingScreen(
                 title = {
                     Text(
                         "Asteroid Tracking",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        style = MaterialTheme.typography.titleLarge
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            contentDescription = "Back"
                         )
                     }
                 },
@@ -73,20 +73,17 @@ fun AsteroidTrackingScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
-            // FEATURED ASTEROID
+            // FEATURED
             if (featured != null) {
-
                 item {
                     Text(
                         "Featured Asteroid",
                         style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                        modifier = Modifier.padding(bottom = 8.dp)
+                            fontWeight = FontWeight.Bold
+                        )
                     )
                     Text(
-                        "Most meaningful object based on size and close-approach distance",
+                        "Most significant object based on size + approach distance",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
@@ -94,111 +91,53 @@ fun AsteroidTrackingScreen(
                 }
 
                 item {
-                    FeaturedAsteroidCard(asteroid = featured)
+                    FeaturedAsteroidCard(
+                        asteroid = featured,
+                        shape = cardShape
+                    )
                 }
             }
 
+            // UPCOMING LIST
             item {
                 Text(
                     "Upcoming Close Approaches (Next 7 Days)",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
+                    )
                 )
             }
 
-            // LIST OF FILTERED ASTEROIDS
             items(weekList) { asteroid ->
-                AsteroidListCard(asteroid)
-            }
-
-            // CLASSIFICATION CARD
-            item {
-                ClassificationCard()
-            }
-        }
-    }
-}
-
-@Composable
-fun FeaturedAsteroidCard(asteroid: AsteroidApproach) {
-
-    val borderColor = if (asteroid.isPotentiallyHazardous)
-        Color(0xFFD32F2F)
-    else
-        MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-
-    ElevatedCard(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    asteroid.name,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                AsteroidListCard(
+                    asteroid = asteroid,
+                    shape = cardShape
                 )
-
-                Spacer(Modifier.width(12.dp))
-
-                if (asteroid.isPotentiallyHazardous) {
-                    HazardBadge()
-                }
             }
 
-            Text(
-                if (asteroid.isPotentiallyHazardous)
-                    "Potentially Hazardous Asteroid"
-                else
-                    "Near-Earth Asteroid",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-
-            MetricsRow(asteroid)
-
-            if (asteroid.isPotentiallyHazardous) {
-                HazardWarningBox()
-            }
+            item { ClassificationCard(shape = cardShape) }
         }
     }
 }
 
 @Composable
-fun AsteroidListCard(asteroid: AsteroidApproach) {
-
-    val borderColor = if (asteroid.isPotentiallyHazardous)
-        Color(0xFFD32F2F)
-    else
-        MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+fun FeaturedAsteroidCard(
+    asteroid: AsteroidApproach,
+    shape: RoundedCornerShape
+) {
+    val borderColor =
+        if (asteroid.isPotentiallyHazardous) CelestiaHazardRed
+        else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
 
     ElevatedCard(
-        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, borderColor, shape),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+        shape = shape,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -207,18 +146,16 @@ fun AsteroidListCard(asteroid: AsteroidApproach) {
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     asteroid.name,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
-
-                if (asteroid.isPotentiallyHazardous) {
-                    HazardBadge()
-                }
+                if (asteroid.isPotentiallyHazardous) { HazardBadge() }
             }
 
             Text(
@@ -226,15 +163,67 @@ fun AsteroidListCard(asteroid: AsteroidApproach) {
                     "Potentially Hazardous Asteroid"
                 else
                     "Near-Earth Asteroid",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
 
             MetricsRow(asteroid)
 
-            if (asteroid.isPotentiallyHazardous) {
-                HazardWarningBox()
+            if (asteroid.isPotentiallyHazardous) { HazardWarningBox() }
+        }
+    }
+}
+
+@Composable
+fun AsteroidListCard(
+    asteroid: AsteroidApproach,
+    shape: RoundedCornerShape
+) {
+    val borderColor =
+        if (asteroid.isPotentiallyHazardous) CelestiaHazardRed
+        else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, borderColor, shape),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = shape,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    asteroid.name,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.weight(1f)
+                )
+                if (asteroid.isPotentiallyHazardous) { HazardBadge() }
             }
+
+            Text(
+                if (asteroid.isPotentiallyHazardous)
+                    "Potentially Hazardous Asteroid"
+                else
+                    "Near-Earth Asteroid",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+
+            MetricsRow(asteroid)
+
+            if (asteroid.isPotentiallyHazardous) { HazardWarningBox() }
         }
     }
 }
@@ -249,7 +238,10 @@ fun MetricsRow(asteroid: AsteroidApproach) {
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             MetricItem(
                 icon = R.drawable.ic_calendar,
                 label = "Closest Approach",
@@ -262,7 +254,10 @@ fun MetricsRow(asteroid: AsteroidApproach) {
             )
         }
 
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             MetricItem(
                 icon = R.drawable.ic_ruler,
                 label = "Diameter",
@@ -283,13 +278,21 @@ fun MetricItem(icon: Int, label: String, value: String) {
         Icon(
             painter = painterResource(id = icon),
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.tertiary
         )
         Spacer(Modifier.width(10.dp))
         Column {
-            Text(label, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall)
-            Text(value, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
@@ -297,13 +300,13 @@ fun MetricItem(icon: Int, label: String, value: String) {
 @Composable
 fun HazardBadge() {
     Surface(
-        color = Color(0xFFD32F2F),
+        color = CelestiaHazardRed,
         shape = RoundedCornerShape(50),
-        tonalElevation = 4.dp
+        shadowElevation = 4.dp
     ) {
         Text(
             text = "Hazardous",
-            color = Color.White,
+            color = TextPrimary,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelMedium
         )
@@ -313,9 +316,9 @@ fun HazardBadge() {
 @Composable
 fun HazardWarningBox() {
     Surface(
-        color = Color(0x22D32F2F),
+        color = CelestiaHazardRed.copy(alpha = 0.25f),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, Color(0xFFD32F2F))
+        border = BorderStroke(1.dp, CelestiaHazardRed)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -323,22 +326,23 @@ fun HazardWarningBox() {
         ) {
             Text(
                 text = "This asteroid is classified as potentially hazardous due to its size and close approach distance to Earth.",
-                color = Color(0xFFEF6969),
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
             )
         }
     }
 }
 
 @Composable
-fun ClassificationCard() {
+fun ClassificationCard(shape: RoundedCornerShape) {
     ElevatedCard(
-        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+        shape = shape,
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -346,20 +350,23 @@ fun ClassificationCard() {
         ) {
             Text(
                 "Classification",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                )
             )
 
             Text(
                 "Potentially Hazardous Asteroids (PHAs) are defined as asteroids larger than 140 meters that approach Earth within 0.05 AU.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
 
             Text(
                 "Data sourced from NASA’s Center for Near-Earth Object Studies (CNEOS)",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
             )
         }
     }
