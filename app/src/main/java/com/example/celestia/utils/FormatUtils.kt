@@ -8,11 +8,22 @@ import java.util.TimeZone
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+/**
+ * Utility object for formatting numbers, timestamps, coordinates, and various
+ * presentation values used throughout the Celestia app.
+ *
+ * All logic here is display-focused and intentionally contains no behavior changes.
+ */
 object FormatUtils {
 
-    // -------------------------------------------------------------------------
-    //  INTERNAL 12-HOUR FORMATTER (a.m. / p.m.)
-    // -------------------------------------------------------------------------
+    // === Internal 12-Hour Formatter (a.m. / p.m.) ===
+
+    /**
+     * Formats a Date into a custom 12-hour time format using "a.m." / "p.m." suffixes.
+     *
+     * @param date The Date to format.
+     * @return A formatted time string such as "3:45 p.m.".
+     */
     private fun format12HourWithDots(date: Date): String {
         val cal = Calendar.getInstance()
         cal.time = date
@@ -28,13 +39,19 @@ object FormatUtils {
         }
 
         val suffix = if (isPM) "p.m." else "a.m."
-
         return String.format("%d:%02d %s", hour12, minute, suffix)
     }
 
-    // -------------------------------------------------------------------------
-    //  SMART PRECISION NUMBER FORMATTER
-    // -------------------------------------------------------------------------
+    // === Smart Precision Number Formatter ===
+
+    /**
+     * Formats a number using intelligent precision rules:
+     * - Whole numbers are shown with commas only (e.g., 1,200)
+     * - Non-whole numbers may use one decimal if needed
+     *
+     * @param value The numeric value to format.
+     * @return A clean, human-readable number string.
+     */
     fun formatNumber(value: Double): String {
         if (value.isNaN()) return "N/A"
 
@@ -47,22 +64,37 @@ object FormatUtils {
         return withCommas(oneDecimal.replace(".0", ""))
     }
 
+    /**
+     * Adds comma separators to integer or decimal strings.
+     *
+     * @param input The numeric string.
+     * @return A properly formatted string with commas or the original input on failure.
+     */
     private fun withCommas(input: String): String {
         return try {
             val parts = input.split(".")
             val intPart = parts[0]
-            val withCommas = intPart.reversed()
+            val withCommas = intPart
+                .reversed()
                 .chunked(3)
                 .joinToString(",")
                 .reversed()
 
-            if (parts.size == 1) withCommas
-            else "$withCommas.${parts[1]}"
+            if (parts.size == 1) withCommas else "$withCommas.${parts[1]}"
         } catch (e: Exception) {
             input
         }
     }
 
+    // === Time Formatting ===
+
+    /**
+     * Formats a timestamp into 24-hour or 12-hour time format based on user preference.
+     *
+     * @param timestamp Milliseconds since epoch.
+     * @param use24h Whether 24-hour format is preferred.
+     * @return A formatted time string.
+     */
     fun formatTime(timestamp: Long, use24h: Boolean): String {
         val date = Date(timestamp)
         return if (use24h) {
@@ -72,9 +104,17 @@ object FormatUtils {
         }
     }
 
-    // -------------------------------------------------------------------------
-    //  UPDATED TIMESTAMP (Used in ISS + KpIndex)
-    // -------------------------------------------------------------------------
+    // === Updated Timestamp (Used in ISS + Kp Index) ===
+
+    /**
+     * Formats "last updated" timestamps as:
+     * - "MMM d, HH:mm" (24-hour)
+     * - "MMM d, h:mm a.m./p.m." (12-hour)
+     *
+     * @param rawMillis Timestamp in milliseconds as a string.
+     * @param use24h Whether the user prefers 24-hour time.
+     * @return A formatted timestamp or "Unknown".
+     */
     fun formatUpdatedTimestamp(rawMillis: String?, use24h: Boolean): String {
         if (rawMillis.isNullOrBlank()) return "Unknown"
 
@@ -82,21 +122,27 @@ object FormatUtils {
             val millis = rawMillis.toLong()
             val date = Date(millis)
 
-            return if (use24h) {
+            if (use24h) {
                 SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(date)
             } else {
                 val day = SimpleDateFormat("MMM d,", Locale.getDefault()).format(date)
                 "$day ${format12HourWithDots(date)}"
             }
-
         } catch (e: Exception) {
             "Unknown"
         }
     }
 
-    // -------------------------------------------------------------------------
-    //  CONVERT TIME FORMAT (Simplified)
-    // -------------------------------------------------------------------------
+    // === Convert Time Format (Simplified) ===
+
+    /**
+     * Attempts to parse an input time string using several fallback formats, then
+     * re-renders it in the user’s preferred time format.
+     *
+     * @param input The time string being converted.
+     * @param use24h Whether 24-hour format is preferred.
+     * @return A formatted time string or the original input on failure.
+     */
     fun convertTimeFormat(input: String, use24h: Boolean): String {
         val formats = listOf(
             "MMM dd, HH:mm",
@@ -109,7 +155,9 @@ object FormatUtils {
         val parsed = formats.firstNotNullOfOrNull { pattern ->
             try {
                 SimpleDateFormat(pattern, Locale.US).parse(input)
-            } catch (e: Exception) { null }
+            } catch (e: Exception) {
+                null
+            }
         } ?: return input
 
         return if (use24h) {
@@ -120,13 +168,22 @@ object FormatUtils {
         }
     }
 
-    // -------------------------------------------------------------------------
-    //  COORDINATES, ALTITUDE, ETC. (unchanged)
-    // -------------------------------------------------------------------------
+    // === Coordinates, Altitude, Velocity, Percent, etc. ===
+
+    /**
+     * Formats latitude and longitude into a readable compass format.
+     *
+     * @param lat Latitude in decimal degrees.
+     * @param lon Longitude in decimal degrees.
+     * @return A formatted coordinate string (e.g., "49.1234° N, 97.1234° W").
+     */
     fun formatCoordinates(lat: Double, lon: Double): String {
         return "${formatSingleCoord(lat, 'N', 'S')}, ${formatSingleCoord(lon, 'E', 'W')}"
     }
 
+    /**
+     * Formats a single coordinate value into degrees + hemisphere suffix.
+     */
     private fun formatSingleCoord(value: Double, positive: Char, negative: Char): String {
         val hemi = if (value >= 0) positive else negative
         val absValue = abs(value)
@@ -134,13 +191,30 @@ object FormatUtils {
         return "$formatted° $hemi"
     }
 
+    /** Formats altitude in kilometers. */
     fun formatAltitude(km: Double): String = "${formatNumber(km)} km"
+
+    /** Formats speed in km/h. */
     fun formatVelocity(kmh: Double): String = "${formatNumber(kmh)} km/h"
+
+    /** Formats distance in kilometers. */
     fun formatDistance(km: Double): String = "${formatNumber(km)} km"
+
+    /** Formats a percentage (absolute value). */
     fun formatPercent(raw: Double): String = "${formatNumber(abs(raw))}%"
 
+    /** Formats lunar age (days). */
     fun formatMoonAge(days: Double): String = "${formatNumber(days)} days"
 
+    // === Lunar Time Conversion ===
+
+    /**
+     * Converts simple "HH:mm" style lunar times into 12-hour or 24-hour format.
+     *
+     * @param input The time string (e.g., "14:30").
+     * @param use24h Whether the user prefers 24-hour format.
+     * @return A converted time string or "N/A".
+     */
     fun convertLunarTime(input: String, use24h: Boolean): String {
         if (input.isBlank() || input == "N/A") return "N/A"
 
