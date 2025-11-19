@@ -1,6 +1,7 @@
 package com.example.celestia.utils
 
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -10,27 +11,39 @@ import kotlin.math.roundToInt
 object FormatUtils {
 
     // -------------------------------------------------------------------------
-    //  SMART PRECISION NUMBER FORMATTER (Core helper)
+    //  INTERNAL 12-HOUR FORMATTER (a.m. / p.m.)
     // -------------------------------------------------------------------------
-    /**
-     * Returns a string:
-     *  - Whole numbers → "123"
-     *  - Decimals → "123.4"
-     *  - Always comma-separated
-     *  - Never trailing zeros
-     */
+    private fun format12HourWithDots(date: Date): String {
+        val cal = Calendar.getInstance()
+        cal.time = date
+
+        val hour24 = cal.get(Calendar.HOUR_OF_DAY)
+        val minute = cal.get(Calendar.MINUTE)
+
+        val isPM = hour24 >= 12
+        val hour12 = when {
+            hour24 == 0 -> 12
+            hour24 > 12 -> hour24 - 12
+            else -> hour24
+        }
+
+        val suffix = if (isPM) "p.m." else "a.m."
+
+        return String.format("%d:%02d %s", hour12, minute, suffix)
+    }
+
+    // -------------------------------------------------------------------------
+    //  SMART PRECISION NUMBER FORMATTER
+    // -------------------------------------------------------------------------
     fun formatNumber(value: Double): String {
         if (value.isNaN()) return "N/A"
 
-        // Whole number?
         val whole = value.roundToInt().toDouble()
         if (value == whole) {
             return withCommas(whole.toInt().toString())
         }
 
-        // Otherwise 1 decimal max
         val oneDecimal = String.format("%.1f", value)
-        // Remove ".0" if it occurs
         return withCommas(oneDecimal.replace(".0", ""))
     }
 
@@ -51,47 +64,65 @@ object FormatUtils {
     }
 
     fun formatTime(timestamp: Long, use24h: Boolean): String {
-        val pattern = if (use24h) "HH:mm" else "h:mm a"
-        val sdf = SimpleDateFormat(pattern, Locale.getDefault())
-        return sdf.format(Date(timestamp))
+        val date = Date(timestamp)
+        return if (use24h) {
+            SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
+        } else {
+            format12HourWithDots(date)
+        }
     }
 
+    // -------------------------------------------------------------------------
+    //  UPDATED TIMESTAMP (Used in ISS + KpIndex)
+    // -------------------------------------------------------------------------
+    fun formatUpdatedTimestamp(rawMillis: String?, use24h: Boolean): String {
+        if (rawMillis.isNullOrBlank()) return "Unknown"
+
+        return try {
+            val millis = rawMillis.toLong()
+            val date = Date(millis)
+
+            return if (use24h) {
+                SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(date)
+            } else {
+                val day = SimpleDateFormat("MMM d,", Locale.getDefault()).format(date)
+                "$day ${format12HourWithDots(date)}"
+            }
+
+        } catch (e: Exception) {
+            "Unknown"
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    //  CONVERT TIME FORMAT (Simplified)
+    // -------------------------------------------------------------------------
     fun convertTimeFormat(input: String, use24h: Boolean): String {
-        val possibleFormats = listOf(
-            "MMM dd, HH:mm",            // Already formatted 24h
-            "MMM dd, h:mm a",           // Already formatted 12h
-            "yyyy-MM-dd'T'HH:mm:ss",    // NOAA + ISO without Z
-            "yyyy-MM-dd HH:mm:ss",      // fallback
-            "yyyy-MM-dd"                // date only
+        val formats = listOf(
+            "MMM dd, HH:mm",
+            "MMM dd, h:mm a",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd"
         )
 
-        val parsedDate = possibleFormats.firstNotNullOfOrNull { pattern ->
+        val parsed = formats.firstNotNullOfOrNull { pattern ->
             try {
-                val sdf = java.text.SimpleDateFormat(pattern, java.util.Locale.US)
-                sdf.parse(input)
-            } catch (e: Exception) {
-                null
-            }
-        } ?: return input  // fallback
+                SimpleDateFormat(pattern, Locale.US).parse(input)
+            } catch (e: Exception) { null }
+        } ?: return input
 
-        val outputPattern = if (use24h)
-            "MMM dd, HH:mm"
-        else
-            "MMM dd, h:mm a"
-
-        val outputFormat = java.text.SimpleDateFormat(outputPattern, java.util.Locale.US)
-        return outputFormat.format(parsedDate)
+        return if (use24h) {
+            SimpleDateFormat("MMM dd, HH:mm", Locale.US).format(parsed)
+        } else {
+            val day = SimpleDateFormat("MMM dd,", Locale.US).format(parsed)
+            "$day ${format12HourWithDots(parsed)}"
+        }
     }
 
     // -------------------------------------------------------------------------
-    //  COORDINATE FORMATTING
+    //  COORDINATES, ALTITUDE, ETC. (unchanged)
     // -------------------------------------------------------------------------
-    /**
-     * Converts:
-     *  lat: 49.8951, lon: -97.1384
-     * Into:
-     *  "49.8951° N, 97.1384° W"
-     */
     fun formatCoordinates(lat: Double, lon: Double): String {
         return "${formatSingleCoord(lat, 'N', 'S')}, ${formatSingleCoord(lon, 'E', 'W')}"
     }
@@ -103,35 +134,17 @@ object FormatUtils {
         return "$formatted° $hemi"
     }
 
-    // -------------------------------------------------------------------------
-    //  ALTITUDE (km)
-    // -------------------------------------------------------------------------
-    fun formatAltitude(km: Double): String {
-        return "${formatNumber(km)} km"
-    }
+    fun formatAltitude(km: Double): String = "${formatNumber(km)} km"
+    fun formatVelocity(kmh: Double): String = "${formatNumber(kmh)} km/h"
+    fun formatDistance(km: Double): String = "${formatNumber(km)} km"
+    fun formatPercent(raw: Double): String = "${formatNumber(abs(raw))}%"
 
-    // -------------------------------------------------------------------------
-    //  VELOCITY (km/h)
-    // -------------------------------------------------------------------------
-    fun formatVelocity(kmh: Double): String {
-        return "${formatNumber(kmh)} km/h"
-    }
+    fun formatMoonAge(days: Double): String = "${formatNumber(days)} days"
 
-    // -------------------------------------------------------------------------
-    //  DISTANCE (km)
-    // -------------------------------------------------------------------------
-    fun formatDistance(km: Double): String {
-        return "${formatNumber(km)} km"
-    }
-
-    // -------------------------------------------------------------------------
-    //  PERCENT / ILLUMINATION
-    // -------------------------------------------------------------------------
     fun convertLunarTime(input: String, use24h: Boolean): String {
         if (input.isBlank() || input == "N/A") return "N/A"
 
         return try {
-            // API format is "HH:mm:ss.xxx"
             val parts = input.split(":")
             if (parts.size < 2) return input
 
@@ -141,50 +154,16 @@ object FormatUtils {
             if (use24h) {
                 String.format("%02d:%02d", hour, minute)
             } else {
-                // Convert to 12-hour
                 val suffix = if (hour >= 12) "p.m." else "a.m."
                 val hour12 = when {
                     hour == 0 -> 12
                     hour > 12 -> hour - 12
                     else -> hour
                 }
-                String.format("%d:%02d %s", hour12, minute, suffix)
+                "$hour12:${String.format("%02d", minute)} $suffix"
             }
         } catch (e: Exception) {
             input
-        }
-    }
-
-    fun formatPercent(raw: Double): String {
-        return "${formatNumber(abs(raw))}%"
-    }
-
-    // -------------------------------------------------------------------------
-    //  MOON AGE (days)
-    // -------------------------------------------------------------------------
-    fun formatMoonAge(days: Double): String {
-        val num = formatNumber(days)
-        return "$num days"
-    }
-
-    fun formatUpdatedTimestamp(rawMillis: String?, use24h: Boolean): String {
-        if (rawMillis.isNullOrBlank()) return "Unknown"
-
-        return try {
-            val millis = rawMillis.toLong()
-
-            val date = Date(millis)
-            val sdf = if (use24h) {
-                SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
-            } else {
-                SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
-            }
-
-            sdf.timeZone = TimeZone.getDefault()
-            sdf.format(date)
-
-        } catch (e: Exception) {
-            "Unknown"
         }
     }
 }

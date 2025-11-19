@@ -36,6 +36,7 @@ fun KpIndexScreen(
     val use24h by settingsVM.timeFormat24H.observeAsState(true)
 
     val readings by vm.readings.observeAsState(emptyList())
+    val grouped by vm.groupedKp.observeAsState(emptyList())   // ⭐ NEW
     val lastUpdatedRaw by vm.lastUpdated.observeAsState("Never")
 
     val cardShape = RoundedCornerShape(14.dp)
@@ -229,8 +230,7 @@ fun KpIndexScreen(
                     )
                 }
 
-                val grouped = vm.groupKpReadingsHourly(readings)
-
+                // ⭐ REPLACED: Uses precomputed values from ViewModel
                 items(grouped.take(12).withIndex().toList()) { indexed ->
 
                     val (i, triple) = indexed

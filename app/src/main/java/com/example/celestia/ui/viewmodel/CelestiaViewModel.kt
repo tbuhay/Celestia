@@ -24,6 +24,7 @@ import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.abs
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -43,6 +44,10 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
 
     private val _lastUpdated = MutableLiveData<String>()
     val lastUpdated: LiveData<String> = _lastUpdated
+
+    // ⭐ NEW: Background-computed grouped KP data
+    private val _groupedKp = MutableLiveData<List<KpHourlyGroup>>(emptyList())
+    val groupedKp: LiveData<List<KpHourlyGroup>> = _groupedKp
 
     // -------------------------------------------------------------------------
     // ISS Live Position
@@ -79,6 +84,19 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
 
     init {
         _lastUpdated.value = prefs.getString("last_updated", "Never")
+
+        // Always compute at startup if LiveData already has value
+        viewModelScope.launch {
+            val initial = readings.value
+            if (initial != null) {
+                computeGroupedKp(initial)
+            }
+        }
+
+        // Compute again whenever new readings arrive
+        readings.observeForever { list ->
+            computeGroupedKp(list)
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -274,6 +292,16 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
         val sdf = SimpleDateFormat("MMM d, HH:mm", Locale.US)
         sdf.timeZone = TimeZone.getDefault()
         return sdf.format(Date())
+    }
+
+    // -------------------------------------------------------------------------
+    // NEW: Background KP grouping (FIXES YOUR ISSUE)
+    // -------------------------------------------------------------------------
+    fun computeGroupedKp(readings: List<KpReading>) {
+        viewModelScope.launch(Dispatchers.Default) {
+            val result = groupKpReadingsHourly(readings)
+            _groupedKp.postValue(result)
+        }
     }
 
     // -------------------------------------------------------------------------
