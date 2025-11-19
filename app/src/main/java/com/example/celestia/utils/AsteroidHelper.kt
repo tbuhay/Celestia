@@ -1,7 +1,5 @@
 package com.example.celestia.utils
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.example.celestia.data.model.AsteroidApproach
 import java.time.LocalDate
 
@@ -22,7 +20,7 @@ object AsteroidHelper {
      * @param asteroid The asteroid approach object containing min/max diameters.
      * @return The average diameter in meters.
      */
-    fun avgDiameter(asteroid: AsteroidApproach): Double {
+    private fun avgDiameter(asteroid: AsteroidApproach): Double {
         return (asteroid.diameterMinMeters + asteroid.diameterMaxMeters) / 2.0
     }
 
@@ -35,7 +33,7 @@ object AsteroidHelper {
      * @param asteroid The asteroid to evaluate.
      * @return True if the asteroid meets visibility criteria.
      */
-    fun isMeaningful(asteroid: AsteroidApproach): Boolean {
+    private fun isMeaningful(asteroid: AsteroidApproach): Boolean {
         val diameter = avgDiameter(asteroid)
         val isBigEnough = diameter >= 120.0
         val isCloseEnough = asteroid.missDistanceAu <= 0.5
@@ -51,8 +49,7 @@ object AsteroidHelper {
      * @param dateString The date string in ISO yyyy-MM-dd format.
      * @return True if the date is between today and seven days from now.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun isWithinNext7Days(dateString: String): Boolean {
+    private fun isWithinNext7Days(dateString: String): Boolean {
         val today = LocalDate.now()
         val date = LocalDate.parse(dateString)
         return !date.isBefore(today) && !date.isAfter(today.plusDays(7))
@@ -67,7 +64,6 @@ object AsteroidHelper {
      * @param list Full asteroid approach dataset.
      * @return A sorted list of meaningful asteroid approaches.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     fun getMeaningfulAsteroids(list: List<AsteroidApproach>): List<AsteroidApproach> {
         return list
             .filter { asteroid ->
@@ -86,7 +82,6 @@ object AsteroidHelper {
      * @param list The asteroid approaches.
      * @return A list sorted by approach date.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     fun getNext7DaysList(list: List<AsteroidApproach>): List<AsteroidApproach> {
         return list
             .filter { isMeaningful(it) && isWithinNext7Days(it.approachDate) }
@@ -105,7 +100,6 @@ object AsteroidHelper {
      * @param list The asteroid approach list.
      * @return The asteroid to be featured, or null if list is empty.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     fun getFeaturedAsteroid(list: List<AsteroidApproach>): AsteroidApproach? {
         if (list.isEmpty()) return null
 

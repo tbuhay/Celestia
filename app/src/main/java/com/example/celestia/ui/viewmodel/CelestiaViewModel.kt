@@ -1,34 +1,33 @@
 package com.example.celestia.ui.viewmodel
 
 import android.app.Application
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.*
 import com.example.celestia.R
 import com.example.celestia.data.db.CelestiaDatabase
 import com.example.celestia.data.model.AsteroidApproach
-import com.example.celestia.data.model.Astronaut
 import com.example.celestia.data.model.KpHourlyGroup
 import com.example.celestia.data.model.KpReading
-import com.example.celestia.data.model.LunarPhaseEntity
 import com.example.celestia.data.repository.CelestiaRepository
 import com.example.celestia.data.store.ThemeKeys
 import com.example.celestia.data.store.themeDataStore
+import com.example.celestia.utils.AsteroidHelper
 import com.example.celestia.utils.LunarHelper
 import com.example.celestia.utils.TimeUtils
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.time.LocalDate
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
-import kotlin.math.abs
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
+/**
+ * Central ViewModel for Celestia.
+ *
+ * Handles retrieval from the repository, transforms data for UI use,
+ * and exposes state across NOAA Kp Index, ISS, Lunar Phase, and Asteroids.
+ */
 class CelestiaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = CelestiaDatabase.getInstance(application).dao()
@@ -41,28 +40,28 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     // -------------------------------------------------------------------------
     // NOAA — Kp Index
     // -------------------------------------------------------------------------
+
     val readings = repo.readings.asLiveData()
 
     private val _lastUpdated = MutableLiveData<String>()
     val lastUpdated: LiveData<String> = _lastUpdated
 
-    // ⭐ NEW: Background-computed grouped KP data
     private val _groupedKp = MutableLiveData<List<KpHourlyGroup>>(emptyList())
     val groupedKp: LiveData<List<KpHourlyGroup>> = _groupedKp
 
     // -------------------------------------------------------------------------
-    // ISS Live Position
+    // ISS — Live Position & Crew Count
     // -------------------------------------------------------------------------
-    val issReading = repo.issReading.asLiveData()
 
-    private val _astronauts = MutableLiveData<List<Astronaut>>()
-    val astronauts: LiveData<List<Astronaut>> = _astronauts
+    val issReading = repo.issReading.asLiveData()
 
     private val _astronautCount = MutableLiveData<Int>()
     val astronautCount: LiveData<Int> = _astronautCount
+
     // -------------------------------------------------------------------------
-    // Lunar Phase (persistent in Room)
+    // Lunar Phase
     // -------------------------------------------------------------------------
+
     val lunarPhase = repo.lunarPhase.asLiveData()
 
     private val _isLunarLoading = MutableLiveData<Boolean>()
@@ -71,39 +70,39 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     private val _lunarError = MutableLiveData<String?>()
     val lunarError: LiveData<String?> = _lunarError
 
-    private val defaultLat = 49.8951
-    private val defaultLon = -97.1384
-
     private val _lunarUpdated = MutableLiveData<String>()
     val lunarUpdated: LiveData<String> = _lunarUpdated
+
+    private val defaultLat = 49.8951
+    private val defaultLon = -97.1384
 
     // -------------------------------------------------------------------------
     // Asteroids
     // -------------------------------------------------------------------------
+
     val nextAsteroid = repo.nextAsteroid.asLiveData()
     val asteroidList = repo.allAsteroids.asLiveData()
+
+    // -------------------------------------------------------------------------
+    // Init
+    // -------------------------------------------------------------------------
 
     init {
         _lastUpdated.value = prefs.getString("last_updated", "Never")
 
-        // Always compute at startup if LiveData already has value
         viewModelScope.launch {
-            val initial = readings.value
-            if (initial != null) {
-                computeGroupedKp(initial)
-            }
+            readings.value?.let { computeGroupedKp(it) }
         }
 
-        // Compute again whenever new readings arrive
         readings.observeForever { list ->
             computeGroupedKp(list)
         }
     }
 
     // -------------------------------------------------------------------------
-    // REFRESH ALL DATA
+    // Global Refresh Handler
     // -------------------------------------------------------------------------
-    @RequiresApi(Build.VERSION_CODES.O)
+
     fun refresh() {
         viewModelScope.launch {
             try {
@@ -131,6 +130,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                 launch {
                     try {
                         _isLunarLoading.postValue(true)
+
                         val useDeviceLocation =
                             getApplication<Application>()
                                 .themeDataStore
@@ -141,21 +141,18 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                         if (useDeviceLocation) {
                             getDeviceLocation(
                                 onResult = { lat, lon ->
-                                    viewModelScope.launch {
-                                        repo.refreshLunarPhase(lat, lon)
-                                    }
+                                    viewModelScope.launch { repo.refreshLunarPhase(lat, lon) }
                                 },
                                 onError = {
-                                    viewModelScope.launch {
-                                        repo.refreshLunarPhase(defaultLat, defaultLon)
-                                    }
+                                    viewModelScope.launch { repo.refreshLunarPhase(defaultLat, defaultLon) }
                                 }
                             )
                         } else {
                             repo.refreshLunarPhase(defaultLat, defaultLon)
                         }
+
                         _lunarUpdated.postValue(System.currentTimeMillis().toString())
-                        Log.d("CelestiaVM", "Lunar phase refreshed")
+
                     } catch (e: Exception) {
                         _lunarError.postValue("Lunar refresh failed")
                         Log.e("CelestiaVM", "Lunar refresh failed", e)
@@ -174,7 +171,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
 
-                // Update global "Last Updated" timestamp (for Home screen header)
+                // Global “Last Updated”
                 val now = TimeUtils.format(System.currentTimeMillis().toString())
                 prefs.edit().putString("last_updated", now).apply()
                 _lastUpdated.postValue(now)
@@ -186,58 +183,24 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     }
 
     // -------------------------------------------------------------------------
-    // ASTRONAUT HELPERS
+    // ISS — Astronaut Helpers
     // -------------------------------------------------------------------------
+
     fun fetchAstronauts() {
         viewModelScope.launch {
             try {
-                val response = repo.getAstronautsRaw()     // new call
+                val response = repo.getAstronautsRaw()
                 val crew = response.people.filter { it.craft == "ISS" }
-
-                _astronauts.value = crew
                 _astronautCount.value = crew.size
-
             } catch (e: Exception) {
-                _astronauts.value = emptyList()
                 _astronautCount.value = 0
             }
         }
     }
 
     // -------------------------------------------------------------------------
-    // LUNAR HELPERS
+    // Lunar Helpers
     // -------------------------------------------------------------------------
-    fun formatMoonPhaseName(raw: String?): String {
-        if (raw.isNullOrBlank()) return "Unknown Phase"
-        return raw.lowercase()
-            .replace("_", " ")
-            .replaceFirstChar { it.uppercase() }
-    }
-
-    fun parseIlluminationPercent(lunar: LunarPhaseEntity?): Double {
-        if (lunar == null) return 0.0
-        return lunar.illuminationPercent
-            .replace("%", "")
-            .trim()
-            .toDoubleOrNull()
-            ?.let { abs(it) }
-            ?: 0.0
-    }
-
-    fun computeMoonAgeDays(lunar: LunarPhaseEntity?): Double {
-        if (lunar == null) return 0.0
-        return when (lunar.moonPhase.uppercase(Locale.US)) {
-            "NEW_MOON"        -> 0.0
-            "WAXING_CRESCENT" -> 4.0
-            "FIRST_QUARTER"   -> 7.4
-            "WAXING_GIBBOUS"  -> 11.0
-            "FULL_MOON"       -> 14.8
-            "WANING_GIBBOUS"  -> 18.4
-            "LAST_QUARTER"    -> 22.1
-            "WANING_CRESCENT" -> 26.0
-            else              -> 0.0
-        }
-    }
 
     fun getMoonPhaseIconRes(phase: String?): Int {
         return when (phase?.uppercase(Locale.US)) {
@@ -253,65 +216,25 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun loadLunarPhase(latitude: Double = defaultLat, longitude: Double = defaultLon) {
-        viewModelScope.launch {
-            _isLunarLoading.value = true
-            _lunarError.value = null
+    fun daysUntilNextFullMoon(age: Double): Double =
+        LunarHelper.daysUntilNextFullMoon(age)
 
-            try {
-                repo.refreshLunarPhase(latitude, longitude)
-                _lunarUpdated.postValue(System.currentTimeMillis().toString())
-            } catch (e: Exception) {
-                _lunarError.postValue("Unable to load lunar data")
-                Log.e("CelestiaVM", "loadLunarPhase failed", e)
-            } finally {
-                _isLunarLoading.postValue(false)
-            }
-        }
-    }
+    fun daysUntilNextNewMoon(age: Double): Double =
+        LunarHelper.daysUntilNextNewMoon(age)
 
-    private val lunarCycleDays = 29.53
-
-    fun daysUntilNextFullMoon(age: Double): Double {
-        val fullMoonAge = 14.8
-        return if (age <= fullMoonAge) {
-            fullMoonAge - age
-        } else {
-            (lunarCycleDays - age) + fullMoonAge
-        }
-    }
-
-    fun daysUntilNextNewMoon(age: Double): Double {
-        return if (age <= 0.0) {
-            0.0
-        } else {
-            lunarCycleDays - age
-        }
-    }
-
-    private fun currentLocalTime(): String {
-        val sdf = SimpleDateFormat("MMM d, HH:mm", Locale.US)
-        sdf.timeZone = TimeZone.getDefault()
-        return sdf.format(Date())
-    }
-
-    fun getMoonAge(): Double {
-        return LunarHelper.getMoonAge()
-    }
+    fun getMoonAge(): Double = LunarHelper.getMoonAge()
 
     // -------------------------------------------------------------------------
-    // NEW: Background KP grouping (FIXES YOUR ISSUE)
+    // Kp Index Grouping
     // -------------------------------------------------------------------------
+
     fun computeGroupedKp(readings: List<KpReading>) {
         viewModelScope.launch(Dispatchers.Default) {
-            val result = groupKpReadingsHourly(readings)
-            _groupedKp.postValue(result)
+            val grouped = groupKpReadingsHourly(readings)
+            _groupedKp.postValue(grouped)
         }
     }
 
-    // -------------------------------------------------------------------------
-    // GROUP HOURLY KP DATA (USED IN KpIndexScreen)
-    // -------------------------------------------------------------------------
     fun groupKpReadingsHourly(readings: List<KpReading>): List<KpHourlyGroup> {
         if (readings.isEmpty()) return emptyList()
 
@@ -320,77 +243,33 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
 
         return readings
             .groupBy { reading ->
-                val date = sdf.parse(reading.timestamp)!!   // <- fix nullable Date?
+                val date = sdf.parse(reading.timestamp)!!
                 val epoch = date.time
-                Date(epoch - (epoch % (60 * 60 * 1000))) // floor to the top of the hour
+                Date(epoch - (epoch % (60 * 60 * 1000)))
             }
             .map { (hour, group) ->
                 val values = group.map { it.estimatedKp }
                 val avg = values.average()
                 val high = values.maxOrNull() ?: avg
                 val low = values.minOrNull() ?: avg
-
                 KpHourlyGroup(hour, avg, high, low)
             }
             .sortedByDescending { it.hour }
     }
 
     // -------------------------------------------------------------------------
-    // ASTEROID HELPERS — Option D Filtering
+    // Asteroid Helpers (delegations only)
     // -------------------------------------------------------------------------
-    private fun avgDiameter(asteroid: AsteroidApproach): Double {
-        return (asteroid.diameterMinMeters + asteroid.diameterMaxMeters) / 2.0
-    }
 
-    private fun isMeaningful(asteroid: AsteroidApproach): Boolean {
-        val diameter = avgDiameter(asteroid)
-        val isBigEnough = diameter >= 120.0     // meters
-        val isCloseEnough = asteroid.missDistanceAu <= 0.5
-        return isBigEnough && isCloseEnough
-    }
+    fun getNext7DaysList(list: List<AsteroidApproach>) =
+        AsteroidHelper.getNext7DaysList(list)
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun isWithinNext7Days(dateString: String): Boolean {
-        val today = LocalDate.now()
-        val date = LocalDate.parse(dateString)
-        return !date.isBefore(today) && !date.isAfter(today.plusDays(7))
-    }
+    fun getFeaturedAsteroid(list: List<AsteroidApproach>) =
+        AsteroidHelper.getFeaturedAsteroid(list)
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun getMeaningfulAsteroids(list: List<AsteroidApproach>): List<AsteroidApproach> {
-        return list.filter { asteroid ->
-            isMeaningful(asteroid) && isWithinNext7Days(asteroid.approachDate)
-        }
-            .sortedWith(
-                compareBy<AsteroidApproach> { it.missDistanceAu }
-                    .thenBy { LocalDate.parse(it.approachDate) }
-            )
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun getNext7DaysList(list: List<AsteroidApproach>): List<AsteroidApproach> {
-        return list.filter { isMeaningful(it) && isWithinNext7Days(it.approachDate) }
-            .sortedBy { LocalDate.parse(it.approachDate) }
-    }
-
-    // Featured asteroid for UI (Option D)
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun getFeaturedAsteroid(list: List<AsteroidApproach>): AsteroidApproach? {
-        if (list.isEmpty()) return null
-
-        // First: meaningful asteroid (size + distance) within next 7 days
-        val meaningful = getMeaningfulAsteroids(list)
-        if (meaningful.isNotEmpty()) return meaningful.first()
-
-        // Second fallback: closest asteroid within next 7 days
-        val next7 = list.filter { isWithinNext7Days(it.approachDate) }
-        if (next7.isNotEmpty()) {
-            return next7.minByOrNull { it.missDistanceAu }
-        }
-
-        // Last fallback: closest in entire list
-        return list.minByOrNull { it.missDistanceAu }
-    }
+    // -------------------------------------------------------------------------
+    // Device Location
+    // -------------------------------------------------------------------------
 
     fun getDeviceLocation(
         onResult: (lat: Double, lon: Double) -> Unit,
@@ -398,11 +277,8 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     ) {
         try {
             fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
-                if (loc != null) {
-                    onResult(loc.latitude, loc.longitude)
-                } else {
-                    onError()
-                }
+                if (loc != null) onResult(loc.latitude, loc.longitude)
+                else onError()
             }
         } catch (e: Exception) {
             onError()

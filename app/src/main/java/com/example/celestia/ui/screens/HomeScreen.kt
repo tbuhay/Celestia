@@ -25,6 +25,7 @@ import com.example.celestia.ui.theme.*
 import com.example.celestia.utils.FormatUtils
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.example.celestia.ui.viewmodel.SettingsViewModel
+import com.example.celestia.utils.LunarHelper
 import com.google.firebase.auth.FirebaseAuth
 import java.util.Calendar
 
@@ -239,8 +240,8 @@ fun HomeScreen(
                 )
 
                 // ---------- LUNAR CARD ----------
-                val illumination = lunarPhase?.let { vm.parseIlluminationPercent(it) }
-                val moonAge = lunarPhase?.let { vm.computeMoonAgeDays(it) }
+                val illumination = lunarPhase?.let { LunarHelper.parseIlluminationPercent(it) }
+                val moonAge = LunarHelper.getMoonAge()
 
                 CelestiaCard(
                     iconRes = R.drawable.ic_moon,
@@ -256,7 +257,7 @@ fun HomeScreen(
                                 .alignByBaseline()
                         )
                         Text(
-                            text = vm.formatMoonPhaseName(lunarPhase?.moonPhase ?: "Loading..."),
+                            text = LunarHelper.formatMoonPhaseName(lunarPhase?.moonPhase ?: "Loading..."),
                             modifier = Modifier.alignByBaseline(),
                             style = MaterialTheme.typography.titleMedium.copy(
                                 color = MaterialTheme.colorScheme.onSurface

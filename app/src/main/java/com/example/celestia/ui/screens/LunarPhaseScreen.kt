@@ -28,6 +28,7 @@ import com.example.celestia.R
 import com.example.celestia.ui.theme.CelestiaYellow
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.example.celestia.ui.viewmodel.SettingsViewModel
+import com.example.celestia.utils.LunarHelper
 import java.util.Locale
 
 
@@ -77,8 +78,8 @@ fun LunarPhaseScreen(
     val settingsVM: SettingsViewModel = viewModel()
     val use24h = settingsVM.timeFormat24H.observeAsState(true).value
 
-    val phaseName = vm.formatMoonPhaseName(lunarPhase?.moonPhase)
-    val illumination = vm.parseIlluminationPercent(lunarPhase)
+    val phaseName = LunarHelper.formatMoonPhaseName(lunarPhase?.moonPhase)
+    val illumination = LunarHelper.parseIlluminationPercent(lunarPhase)
     val ageDays = vm.getMoonAge()
     val distanceKm = lunarPhase?.moonDistanceKm
     val moonriseText = lunarPhase?.moonRise ?: "N/A"

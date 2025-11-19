@@ -1,7 +1,6 @@
 package com.example.celestia.utils
 
 import android.os.Build
-import androidx.annotation.RequiresApi
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
@@ -18,47 +17,6 @@ import java.util.*
 object TimeUtils {
 
     // === Main Public Formatter ===
-
-    /**
-     * Formats a raw time string using the user's 12-hour or 24-hour clock preference.
-     *
-     * @param raw The raw timestamp input (ISO-8601, epoch millis/seconds, etc.)
-     * @param use24h Whether the user prefers 24-hour time format.
-     * @return A formatted date-time string or "Unknown" if parsing fails.
-     */
-    fun formatWithPreference(raw: String?, use24h: Boolean): String {
-        val base = format(raw)
-        return if (use24h) base else convertTo12Hour(base)
-    }
-
-    /**
-     * Converts a formatted 24-hour time string ("MMM dd, HH:mm") into a 12-hour format
-     * using Celestia’s custom a.m./p.m. suffix style.
-     *
-     * @param input The formatted 24-hour timestamp.
-     * @return The converted 12-hour timestamp or the original input on failure.
-     */
-    private fun convertTo12Hour(input: String): String {
-        return try {
-            val inputFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.US)
-            val date = inputFormat.parse(input) ?: return input
-
-            val dayPart = SimpleDateFormat("MMM dd,", Locale.US).format(date)
-
-            val timePart = FormatUtils.run {
-                val d = date
-                val hour = SimpleDateFormat("h", Locale.getDefault()).format(d)
-                val minute = SimpleDateFormat("mm", Locale.getDefault()).format(d)
-                val isPM = SimpleDateFormat("a", Locale.getDefault()).format(d) == "PM"
-                val suffix = if (isPM) "p.m." else "a.m."
-                "$hour:$minute $suffix"
-            }
-
-            "$dayPart $timePart"
-        } catch (e: Exception) {
-            input
-        }
-    }
 
     /**
      * Attempts to parse and format a raw timestamp using available parsing strategies.
@@ -97,7 +55,6 @@ object TimeUtils {
      * @param value The raw timestamp string.
      * @return A parsed Instant or null if all strategies fail.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun parseInstant(value: String): Instant? {
         try {
             return Instant.parse(value)
@@ -164,7 +121,6 @@ object TimeUtils {
      * @param instant The Instant to format.
      * @return A formatted timestamp string.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun formatInstant(instant: Instant): String {
         val zone = ZoneId.systemDefault()
         val fmt = DateTimeFormatter.ofPattern("MMM dd, HH:mm", Locale.US)
