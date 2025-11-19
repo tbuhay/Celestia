@@ -15,6 +15,7 @@ import com.example.celestia.data.model.LunarPhaseEntity
 import com.example.celestia.data.repository.CelestiaRepository
 import com.example.celestia.data.store.ThemeKeys
 import com.example.celestia.data.store.themeDataStore
+import com.example.celestia.utils.LunarHelper
 import com.example.celestia.utils.TimeUtils
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -292,6 +293,10 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
         val sdf = SimpleDateFormat("MMM d, HH:mm", Locale.US)
         sdf.timeZone = TimeZone.getDefault()
         return sdf.format(Date())
+    }
+
+    fun getMoonAge(): Double {
+        return LunarHelper.getMoonAge()
     }
 
     // -------------------------------------------------------------------------

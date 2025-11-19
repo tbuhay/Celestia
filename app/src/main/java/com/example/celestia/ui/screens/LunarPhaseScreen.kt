@@ -79,7 +79,7 @@ fun LunarPhaseScreen(
 
     val phaseName = vm.formatMoonPhaseName(lunarPhase?.moonPhase)
     val illumination = vm.parseIlluminationPercent(lunarPhase)
-    val ageDays = vm.computeMoonAgeDays(lunarPhase)
+    val ageDays = vm.getMoonAge()
     val distanceKm = lunarPhase?.moonDistanceKm
     val moonriseText = lunarPhase?.moonRise ?: "N/A"
     val moonsetText = lunarPhase?.moonSet ?: "N/A"
