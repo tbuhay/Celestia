@@ -242,39 +242,31 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             timeZone = TimeZone.getTimeZone("UTC")
         }
 
-        val localZone = TimeZone.getDefault()
+        val localTZ = TimeZone.getDefault()
 
         return readings
             .map { reading ->
-                // Parse NOAA UTC timestamp
-                val dateUtc = formatterUtc.parse(reading.timestamp)!!
-                val millisUtc = dateUtc.time
+                val utcMillis = formatterUtc.parse(reading.timestamp)!!.time
 
-                // Convert UTC → local time
-                val localCal = Calendar.getInstance(localZone).apply {
-                    timeInMillis = millisUtc
+                // Convert UTC → local
+                val cal = Calendar.getInstance(localTZ).apply {
+                    timeInMillis = utcMillis
                     set(Calendar.MINUTE, 0)
                     set(Calendar.SECOND, 0)
                     set(Calendar.MILLISECOND, 0)
                 }
 
-                // Produce a clean local-hour key
-                val localHourStart = Date(localCal.timeInMillis)
-
-                Pair(localHourStart, reading)
+                val localHourStart = Date(cal.timeInMillis)
+                localHourStart to reading
             }
             .groupBy { it.first }
-            .map { (localHour, groupedItems) ->
-                val values = groupedItems.map { it.second.estimatedKp }
-                val avg = values.average()
-                val high = values.maxOrNull() ?: avg
-                val low = values.minOrNull() ?: avg
-
+            .map { (hour, items) ->
+                val values = items.map { it.second.estimatedKp }
                 KpHourlyGroup(
-                    hour = localHour,
-                    avg = avg,
-                    high = high,
-                    low = low
+                    hour = hour,
+                    avg = values.average(),
+                    high = values.maxOrNull() ?: 0.0,
+                    low = values.minOrNull() ?: 0.0
                 )
             }
             .sortedByDescending { it.hour }

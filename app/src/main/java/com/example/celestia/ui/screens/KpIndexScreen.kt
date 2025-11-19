@@ -48,7 +48,6 @@ fun KpIndexScreen(
         }
     }
 
-    // Pre-trim the grouped list for performance (e.g., last 12)
     val recentGroups = remember(grouped) { grouped.take(12) }
 
     Scaffold(
