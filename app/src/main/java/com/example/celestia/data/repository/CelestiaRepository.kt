@@ -5,38 +5,37 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import com.example.celestia.BuildConfig
 import com.example.celestia.data.db.CelestiaDao
-import com.example.celestia.data.model.IssReading
-import com.example.celestia.data.model.KpReading
-import com.example.celestia.data.model.LunarPhase
+import com.example.celestia.data.model.*
+import com.example.celestia.data.network.AstronautResponse
 import com.example.celestia.data.network.RetrofitInstance
 import com.example.celestia.utils.TimeUtils
 import kotlinx.coroutines.flow.Flow
-import com.example.celestia.data.model.AsteroidApproach
-import com.example.celestia.data.model.AsteroidFeedResponse
-import com.example.celestia.data.model.Astronaut
-import com.example.celestia.data.model.LunarPhaseEntity
-import com.example.celestia.data.network.AstronautResponse
 import java.time.LocalDate
 
+/**
+ * Repository for Celestia — handles network fetching, Room persistence,
+ * and unified error handling. ViewModels should only call into this class.
+ */
 class CelestiaRepository(private val dao: CelestiaDao) {
 
     // -------------------------------------------------------------------------
-    //  NOAA (Kp Index)
+    // NOAA (Kp Index)
     // -------------------------------------------------------------------------
     val readings: Flow<List<KpReading>> = dao.getAll()
 
-    suspend fun refreshData() {
+    suspend fun refreshKpIndex() {
         try {
             val newData = RetrofitInstance.noaaApi.getKpIndex()
+            Log.d("CelestiaRepo.KP", "Fetched ${newData.size} Kp readings")
+
             dao.insertAll(newData)
-            Log.d("CelestiaRepo", "Inserted ${newData.size} Kp readings")
         } catch (e: Exception) {
-            Log.e("CelestiaRepo", "Error fetching NOAA data", e)
+            Log.e("CelestiaRepo.KP", "Error refreshing Kp Index", e)
         }
     }
 
     // -------------------------------------------------------------------------
-    //  ISS (Live Position) — Persisted in Room
+    // ISS (Live Position)
     // -------------------------------------------------------------------------
     val issReading: Flow<IssReading?> = dao.getIssReading()
 
@@ -54,58 +53,43 @@ class CelestiaRepository(private val dao: CelestiaDao) {
             )
 
             dao.insertIssReading(reading)
-            Log.d(
-                "CelestiaRepo",
-                "ISS data stored locally: ${reading.latitude}, ${reading.longitude}"
-            )
+            Log.d("CelestiaRepo.ISS", "ISS updated: lat=${reading.latitude}, lon=${reading.longitude}")
 
         } catch (e: Exception) {
-            Log.e("CelestiaRepo", "Error refreshing ISS data", e)
+            Log.e("CelestiaRepo.ISS", "Error refreshing ISS data", e)
         }
     }
 
-    suspend fun loadAstronauts(): List<Astronaut> {
-        return RetrofitInstance.astronautApi.getAstronauts().people
-    }
+    // -------------------------------------------------------------------------
+    // Astronauts API
+    // -------------------------------------------------------------------------
 
-    suspend fun loadAstronautCount(): Int {
-        return RetrofitInstance.astronautApi.getAstronauts().number
-    }
-
-    suspend fun getAstronautsRaw(): AstronautResponse {
-        return RetrofitInstance.astronautApi.getAstronauts()
-    }
-
+    suspend fun getAstronautsRaw(): AstronautResponse =
+        RetrofitInstance.astronautApi.getAstronauts()
 
     // -------------------------------------------------------------------------
-    //  Lunar Phase API
+    // Lunar Phase API
     // -------------------------------------------------------------------------
     val lunarPhase: Flow<LunarPhaseEntity?> = dao.getLunarPhase()
 
-    suspend fun fetchLunarPhase(
-        latitude: Double,
-        longitude: Double
-    ): LunarPhase {
-        return RetrofitInstance.lunarApi.getLunarPhase(
-            apiKey = BuildConfig.IPGEO_API_KEY,
-            latitude = latitude,
-            longitude = longitude
-        )
-    }
-
     suspend fun refreshLunarPhase(lat: Double, lon: Double) {
-        val lunar = RetrofitInstance.lunarApi.getLunarPhase(
-            apiKey = BuildConfig.IPGEO_API_KEY,
-            latitude = lat,
-            longitude = lon
-        )
+        try {
+            val lunar = RetrofitInstance.lunarApi.getLunarPhase(
+                apiKey = BuildConfig.IPGEO_API_KEY,
+                latitude = lat,
+                longitude = lon
+            )
 
-        val now = TimeUtils.format(System.currentTimeMillis().toString())
+            val updatedAt = TimeUtils.format(System.currentTimeMillis().toString())
+            dao.insertLunarPhase(mapLunarToEntity(lunar, updatedAt))
 
-        dao.insertLunarPhase(mapToEntity(lunar, now))
+            Log.d("CelestiaRepo.Lunar", "Lunar phase updated successfully")
+        } catch (e: Exception) {
+            Log.e("CelestiaRepo.Lunar", "Error refreshing lunar data", e)
+        }
     }
 
-    private fun mapToEntity(lunar: LunarPhase, updatedAt: String): LunarPhaseEntity {
+    private fun mapLunarToEntity(lunar: LunarPhase, updatedAt: String): LunarPhaseEntity {
         return LunarPhaseEntity(
             id = 1,
             moonPhase = lunar.moonPhase,
@@ -118,7 +102,7 @@ class CelestiaRepository(private val dao: CelestiaDao) {
     }
 
     // -------------------------------------------------------------------------
-    //  Asteroids (NASA NEO)
+    // NASA NEO (Asteroids)
     // -------------------------------------------------------------------------
     val nextAsteroid: Flow<AsteroidApproach?> = dao.getNextAsteroid()
     val allAsteroids: Flow<List<AsteroidApproach>> = dao.getAllAsteroids()
@@ -127,33 +111,28 @@ class CelestiaRepository(private val dao: CelestiaDao) {
     suspend fun refreshAsteroids() {
         try {
             val today = LocalDate.now()
-            val startDate = today.toString()
-            val endDate = today.plusDays(7).toString()
-
             val feed = RetrofitInstance.asteroidApi.getDailyFeed(
-                startDate = startDate,
-                endDate = endDate,
+                startDate = today.toString(),
+                endDate = today.plusDays(7).toString(),
                 apiKey = BuildConfig.NASA_API_KEY
             )
 
-            val flattened = mapFeedToEntities(feed)
+            val asteroids = mapFeedToEntities(feed)
 
             dao.clearAsteroids()
-            dao.insertAsteroids(flattened)
+            dao.insertAsteroids(asteroids)
 
-            Log.d("CelestiaRepo", "Inserted ${flattened.size} asteroid records")
-
+            Log.d("CelestiaRepo.Asteroids", "Stored ${asteroids.size} asteroid entries")
         } catch (e: Exception) {
-            Log.e("CelestiaRepo", "Error refreshing asteroid data", e)
+            Log.e("CelestiaRepo.Asteroids", "Error refreshing asteroid data", e)
         }
     }
 
     private fun mapFeedToEntities(feed: AsteroidFeedResponse): List<AsteroidApproach> {
         val result = mutableListOf<AsteroidApproach>()
 
-        feed.nearEarthObjects.forEach { (date, list) ->
-            list.forEach { neo ->
-
+        feed.nearEarthObjects.forEach { (date, objects) ->
+            objects.forEach { neo ->
                 val approach = neo.closeApproachData.firstOrNull() ?: return@forEach
 
                 val diameter = neo.estimatedDiameter.meters
@@ -161,23 +140,18 @@ class CelestiaRepository(private val dao: CelestiaDao) {
                 val missAu = approach.missDistance.au.toDoubleOrNull() ?: 0.0
                 val velKph = approach.velocity.kph.toDoubleOrNull() ?: 0.0
 
-                val entityId = "${neo.id}_$date"
+                val id = "${neo.id}_$date"
 
                 result.add(
                     AsteroidApproach(
-                        id = entityId,
+                        id = id,
                         name = neo.name,
-
-                        // ✔ FIXED: Use FEED DATE, NOT DTO DATE
                         approachDate = date,
-
                         missDistanceKm = missKm,
                         missDistanceAu = missAu,
                         relativeVelocityKph = velKph,
                         diameterMinMeters = diameter.min,
                         diameterMaxMeters = diameter.max,
-
-                        // Your testing logic; fine for now
                         isPotentiallyHazardous = neo.isHazardous
                     )
                 )

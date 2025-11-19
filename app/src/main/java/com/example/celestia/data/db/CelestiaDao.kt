@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao interface CelestiaDao {
 
+    // ---------------- KP INDEX READINGS ----------------
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(readings: List<KpReading>)
 
@@ -20,6 +22,8 @@ import kotlinx.coroutines.flow.Flow
 
     @Query("DELETE FROM kp_readings")
     suspend fun clear()
+
+    // ---------------- ISS LOCATION ----------------
 
     @Query("SELECT * FROM iss_reading LIMIT 1")
     fun getIssReading(): Flow<IssReading?>
@@ -41,9 +45,7 @@ import kotlinx.coroutines.flow.Flow
     @Query("SELECT * FROM asteroid_approaches ORDER BY approachDate ASC LIMIT 1")
     fun getNextAsteroid(): Flow<AsteroidApproach?>
 
-    // ---------------------
-    // Lunar Phase
-    // ---------------------
+    // ---------------- LUNAR PHASES ----------------
 
     @Query("SELECT * FROM lunar_phase LIMIT 1")
     fun getLunarPhase(): Flow<LunarPhaseEntity?>

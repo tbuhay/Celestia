@@ -8,13 +8,19 @@ import androidx.lifecycle.viewModelScope
 import com.example.celestia.data.store.ThemeManager
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel for managing user settings such as dark mode,
+ * time format, auto-refresh, and device location usage.
+ *
+ * All settings are persisted using ThemeManager (DataStore).
+ */
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val themeManager = ThemeManager(application)
 
-    //-----------------------------------------
+    // ---------------------------------------------------------
     // DARK MODE
-    //-----------------------------------------
+    // ---------------------------------------------------------
     val darkModeEnabled: LiveData<Boolean> =
         themeManager.darkModeFlow.asLiveData()
 
@@ -24,10 +30,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    //-----------------------------------------
-    // TIME FORMAT
-    //-----------------------------------------
-    val timeFormat24H: LiveData<Boolean> =
+    // ---------------------------------------------------------
+    // TIME FORMAT (12h vs 24h)
+    // ---------------------------------------------------------
+    val timeFormat24h: LiveData<Boolean> =
         themeManager.timeFormat24H.asLiveData()
 
     fun setTimeFormat(use24h: Boolean) {
@@ -36,10 +42,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    //-----------------------------------------
-    // REFRESH ON APP LAUNCH (NEW)
-    //-----------------------------------------
-    val refreshOnLaunch: LiveData<Boolean> =
+    // ---------------------------------------------------------
+    // REFRESH ON APP LAUNCH
+    // ---------------------------------------------------------
+    val refreshOnLaunchEnabled: LiveData<Boolean> =
         themeManager.refreshOnLaunchFlow.asLiveData()
 
     fun setRefreshOnLaunch(enabled: Boolean) {
@@ -48,7 +54,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    val useDeviceLocation = themeManager.useDeviceLocationFlow.asLiveData()
+    // ---------------------------------------------------------
+    // DEVICE LOCATION
+    // ---------------------------------------------------------
+    val deviceLocationEnabled: LiveData<Boolean> =
+        themeManager.useDeviceLocationFlow.asLiveData()
 
     fun setUseDeviceLocation(enabled: Boolean) {
         viewModelScope.launch {

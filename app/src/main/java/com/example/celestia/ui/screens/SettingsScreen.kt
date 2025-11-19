@@ -71,7 +71,7 @@ fun SettingsScreen(
 ) {
     // Observe Dark Mode setting
     val isDark by settingsVM.darkModeEnabled.observeAsState(true)
-    val use24h by settingsVM.timeFormat24H.observeAsState(true)
+    val use24h by settingsVM.timeFormat24h.observeAsState(true)
     val scrollState = rememberScrollState()
 
     val context = LocalContext.current
@@ -148,7 +148,7 @@ fun SettingsScreen(
                     Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
                     // Auto Refresh
-                    val refreshOnLaunch by settingsVM.refreshOnLaunch.observeAsState(false)
+                    val refreshOnLaunch by settingsVM.refreshOnLaunchEnabled.observeAsState(false)
 
                     SettingsToggleRow(
                         title = "Refresh on Launch",
@@ -170,7 +170,7 @@ fun SettingsScreen(
 
                     Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
-                    val useDeviceLocation by settingsVM.useDeviceLocation.observeAsState(false)
+                    val useDeviceLocation by settingsVM.deviceLocationEnabled.observeAsState(false)
 
                     SettingsToggleRow(
                         title = "Use Device Location",

@@ -76,7 +76,7 @@ fun LunarPhaseScreen(
     val updatedText by vm.lunarUpdated.observeAsState("Unknown")
 
     val settingsVM: SettingsViewModel = viewModel()
-    val use24h = settingsVM.timeFormat24H.observeAsState(true).value
+    val use24h = settingsVM.timeFormat24h.observeAsState(true).value
 
     val phaseName = LunarHelper.formatMoonPhaseName(lunarPhase?.moonPhase)
     val illumination = LunarHelper.parseIlluminationPercent(lunarPhase)

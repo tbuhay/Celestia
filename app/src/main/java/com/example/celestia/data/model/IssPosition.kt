@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "iss_reading")
 data class IssReading(
-    @PrimaryKey val id: Int = 1, // always 1 → one row that gets replaced each refresh
+    @PrimaryKey val id: Int = 1,
     val latitude: Double,
     val longitude: Double,
     val altitude: Double,

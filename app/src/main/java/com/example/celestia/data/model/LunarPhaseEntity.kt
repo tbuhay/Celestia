@@ -5,11 +5,11 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "lunar_phase")
 data class LunarPhaseEntity(
-    @PrimaryKey val id: Int = 1, // always 1 row
+    @PrimaryKey val id: Int = 1,
     val moonPhase: String,
     val illuminationPercent: String,
     val moonRise: String?,
     val moonSet: String?,
     val moonDistanceKm: Double,
-    val updatedAt: String // formatted local time when stored
+    val updatedAt: String
 )

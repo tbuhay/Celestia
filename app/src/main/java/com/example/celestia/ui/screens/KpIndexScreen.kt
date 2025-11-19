@@ -33,7 +33,7 @@ fun KpIndexScreen(
 ) {
     val settingsVM: SettingsViewModel = viewModel()
 
-    val use24h by settingsVM.timeFormat24H.observeAsState(true)
+    val use24h by settingsVM.timeFormat24h.observeAsState(true)
 
     val readings by vm.readings.observeAsState(emptyList())
     val grouped by vm.groupedKp.observeAsState(emptyList())   // ⭐ NEW

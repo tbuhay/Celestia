@@ -109,7 +109,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                 // NOAA
                 launch {
                     try {
-                        repo.refreshData()
+                        repo.refreshKpIndex()
                         Log.d("CelestiaVM", "NOAA data refreshed")
                     } catch (e: Exception) {
                         Log.e("CelestiaVM", "NOAA refresh failed", e)

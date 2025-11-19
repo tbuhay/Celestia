@@ -13,7 +13,6 @@ object ThemeKeys {
     val DARK_MODE = booleanPreferencesKey("dark_mode_enabled")
     val TIME_FORMAT_24H = booleanPreferencesKey("use_24_hour_clock")
 
-    // NEW KEY — Refresh on App Launch
     val REFRESH_ON_LAUNCH = booleanPreferencesKey("refresh_on_launch")
 
     val USE_DEVICE_LOCATION = booleanPreferencesKey("use_device_location")
@@ -54,7 +53,7 @@ class ThemeManager(private val context: Context) {
     //-----------------------------------------
     val refreshOnLaunchFlow: Flow<Boolean> =
         context.themeDataStore.data.map { prefs ->
-            prefs[ThemeKeys.REFRESH_ON_LAUNCH] ?: false   // default: OFF
+            prefs[ThemeKeys.REFRESH_ON_LAUNCH] ?: true
         }
 
     suspend fun setRefreshOnLaunch(enabled: Boolean) {
@@ -65,7 +64,7 @@ class ThemeManager(private val context: Context) {
 
     val useDeviceLocationFlow: Flow<Boolean> =
         context.themeDataStore.data.map { prefs ->
-            prefs[ThemeKeys.USE_DEVICE_LOCATION] ?: false   // default OFF
+            prefs[ThemeKeys.USE_DEVICE_LOCATION] ?: false
         }
 
     suspend fun setUseDeviceLocation(enabled: Boolean) {

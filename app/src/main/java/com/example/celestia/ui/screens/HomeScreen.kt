@@ -43,7 +43,7 @@ fun HomeScreen(
     val nextAsteroid by vm.nextAsteroid.observeAsState()
     val asteroidList = vm.asteroidList.observeAsState(emptyList()).value
     val featuredAsteroid = vm.getFeaturedAsteroid(asteroidList)
-    val refreshOnLaunch by settingsVM.refreshOnLaunch.observeAsState(false)
+    val refreshOnLaunch by settingsVM.refreshOnLaunchEnabled.observeAsState(false)
 
     val scrollState = rememberScrollState()
     val cardShape = RoundedCornerShape(14.dp)

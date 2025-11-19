@@ -48,7 +48,7 @@ fun IssLocationScreen(
     val astronautCount by vm.astronautCount.observeAsState(0)
 
     val settingsVM: SettingsViewModel = viewModel()
-    val use24h = settingsVM.timeFormat24H.observeAsState(true).value
+    val use24h = settingsVM.timeFormat24h.observeAsState(true).value
 
     val cardShape = RoundedCornerShape(14.dp)
     val scrollState = rememberScrollState()
