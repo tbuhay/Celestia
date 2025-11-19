@@ -250,13 +250,13 @@ object FormatUtils {
         val (status, color) = getNoaaKpStatusAndColor(kp)
 
         val description = when {
-            kp >= 8 -> "Severe to extreme geomagnetic storm. Auroras may be visible far from the poles."
-            kp >= 7 -> "Severe geomagnetic storm. Strong auroras likely at mid-latitudes."
-            kp >= 6 -> "Major geomagnetic storm. Auroras common at lower latitudes."
-            kp >= 5 -> "Minor geomagnetic storm. Good chance of aurora in northern skies."
-            kp >= 4 -> "Active geomagnetic conditions. Aurora possible at high latitudes."
-            kp >= 2 -> "Unsettled field. Mild disturbances, occasional aurora near poles."
-            else -> "Quiet geomagnetic conditions. No significant aurora expected."
+            kp >= 8 -> "Extreme geomagnetic storm conditions. Significant effects likely."
+            kp >= 7 -> "Severe geomagnetic storm. Strong auroral activity possible."
+            kp >= 6 -> "Strong geomagnetic storm. Aurora visible at lower latitudes."
+            kp >= 5 -> "Moderate storm activity. Aurora possible in mid-latitudes."
+            kp >= 4 -> "Disturbed geomagnetic conditions."
+            kp >= 2 -> "Elevated solar wind influence."
+            else    -> "Calm geomagnetic conditions."
         }
 
         return Triple(status, color, description)
@@ -274,13 +274,13 @@ object FormatUtils {
      */
     fun getNoaaKpStatusAndColor(kp: Double): Pair<String, Color> {
         return when {
-            kp >= 8 -> "Extreme Storm"        to Color(0xFF8B0000)  // deep red
-            kp >= 7 -> "Severe Storm"         to Color(0xFFB71C1C)  // strong red
-            kp >= 6 -> "Major Storm"          to Color(0xFFE53935)  // red-orange
-            kp >= 5 -> "Minor Storm"          to Color(0xFFFB8C00)  // orange
-            kp >= 4 -> "Active"               to Color(0xFFFFC107)  // amber
-            kp >= 2 -> "Unsettled"            to Color(0xFFCDDC39)  // yellow-green
-            else    -> "Quiet"                to Color(0xFF4CAF50)  // green
+            kp >= 8 -> "Extreme Geomagnetic Storm" to Color(0xFF8B0000)  // deep red
+            kp >= 7 -> "Severe Storm"              to Color(0xFFB71C1C)  // strong red
+            kp >= 6 -> "Strong Storm"              to Color(0xFFE53935)  // red-orange
+            kp >= 5 -> "Moderate Storm"            to Color(0xFFFB8C00)  // orange
+            kp >= 4 -> "Disturbed"                 to Color(0xFFFFC107)  // amber
+            kp >= 2 -> "Elevated"                  to Color(0xFFCDDC39)  // yellow-green
+            else    -> "Calm"                      to Color(0xFF4CAF50)  // green
         }
     }
 }
