@@ -4,7 +4,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 
 // Core brand colors
-val CelestiaBlue = Color(0xFF3680FF)     // General accent
+val CelestiaBlue = Color(0xFF4C8CFF)     // General accent
 val CelestiaPurple = Color(0xFFA43FE9)   // KP Index
 val CelestiaOrange = Color(0xFFFF7A00)   // Asteroid
 val CelestiaTeal = Color(0xFF00E5FF)     // ISS or optional accent

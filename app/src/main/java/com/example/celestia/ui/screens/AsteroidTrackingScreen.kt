@@ -13,7 +13,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -132,7 +136,8 @@ fun FeaturedAsteroidCard(
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, borderColor, shape),
+            .border(1.dp, borderColor, shape)
+            .clearAndSetSemantics {},
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -159,10 +164,17 @@ fun FeaturedAsteroidCard(
             }
 
             Text(
-                if (asteroid.isPotentiallyHazardous)
+                text = if (asteroid.isPotentiallyHazardous)
                     "Potentially Hazardous Asteroid"
                 else
                     "Near-Earth Asteroid",
+                modifier = Modifier.semantics {
+                    contentDescription =
+                        if (asteroid.isPotentiallyHazardous)
+                            "Hazard classification: Potentially hazardous asteroid"
+                        else
+                            "Classification: Near-Earth asteroid"
+                },
                 style = MaterialTheme.typography.bodyMedium.copy(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -187,7 +199,8 @@ fun AsteroidListCard(
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, borderColor, shape),
+            .border(1.dp, borderColor, shape)
+            .clearAndSetSemantics {},
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -216,6 +229,13 @@ fun AsteroidListCard(
                     "Potentially Hazardous Asteroid"
                 else
                     "Near-Earth Asteroid",
+                modifier = Modifier.semantics {
+                    contentDescription =
+                        if (asteroid.isPotentiallyHazardous)
+                            "Hazard classification: Potentially hazardous asteroid"
+                        else
+                            "Classification: Near-Earth asteroid"
+                },
                 style = MaterialTheme.typography.bodyMedium.copy(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -274,7 +294,12 @@ fun MetricsRow(asteroid: AsteroidApproach) {
 
 @Composable
 fun MetricItem(icon: Int, label: String, value: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.semantics {
+            contentDescription = "$label: $value"
+        }
+    ) {
         Icon(
             painter = painterResource(id = icon),
             contentDescription = null,
@@ -302,11 +327,14 @@ fun HazardBadge() {
     Surface(
         color = CelestiaHazardRed,
         shape = RoundedCornerShape(50),
-        shadowElevation = 4.dp
+        shadowElevation = 4.dp,
+        modifier = Modifier.semantics {
+            contentDescription = "Hazard status: hazardous asteroid"
+        }
     ) {
         Text(
             text = "Hazardous",
-            color = TextPrimary,
+            color = Color.White,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelMedium
         )
@@ -318,7 +346,11 @@ fun HazardWarningBox() {
     Surface(
         color = CelestiaHazardRed.copy(alpha = 0.25f),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, CelestiaHazardRed)
+        border = BorderStroke(1.dp, CelestiaHazardRed),
+        modifier = Modifier.semantics {
+            contentDescription =
+                "Hazard explanation: This asteroid is classified as potentially hazardous due to its size and close approach distance to Earth."   // ★ A11Y FIX
+        }
     ) {
         Row(
             modifier = Modifier.padding(12.dp),

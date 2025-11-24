@@ -38,7 +38,6 @@ class MainActivity : ComponentActivity() {
 
                 val navController = rememberNavController()
 
-                // ⭐ SHARED VIEWMODEL FOR THE ENTIRE APP
                 val celestiaVM: CelestiaViewModel = viewModel()
 
                 val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser

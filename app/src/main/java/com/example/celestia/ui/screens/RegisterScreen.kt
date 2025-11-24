@@ -189,7 +189,11 @@ fun RegisterScreen(
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = null
+                                contentDescription = if (passwordVisible) {
+                                    "Hide password"
+                                } else {
+                                    "Show password"
+                                }
                             )
                         }
                     },
@@ -210,10 +214,16 @@ fun RegisterScreen(
                                 vm.register(name.trim(), email.trim(), password.trim())
                         }
                     },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1E63FF)
+                    ),
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Register", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Register",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
 
                 Spacer(Modifier.height(16.dp))

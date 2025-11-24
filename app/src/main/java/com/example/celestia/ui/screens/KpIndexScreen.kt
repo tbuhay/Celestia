@@ -16,6 +16,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -109,7 +112,8 @@ fun KpIndexScreen(
                     ElevatedCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, Color(0x33FFFFFF), cardShape),
+                            .border(1.dp, Color(0x33FFFFFF), cardShape)
+                            .clearAndSetSemantics { },
                         shape = cardShape,
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surface
@@ -125,7 +129,7 @@ fun KpIndexScreen(
                                 text = "Current Kp Index",
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     color = MaterialTheme.colorScheme.primary
-                                )
+                                ),
                             )
 
                             Text(
@@ -139,7 +143,10 @@ fun KpIndexScreen(
                                 text = status,
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     color = statusColor
-                                )
+                                ),
+                                modifier = Modifier.semantics {
+                                    contentDescription = "Kp index status: $status"
+                                }
                             )
 
                             Text(
@@ -184,7 +191,9 @@ fun KpIndexScreen(
                 // Short explanation card
                 item {
                     ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clearAndSetSemantics { },
                         shape = cardShape,
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surface
@@ -221,21 +230,36 @@ fun KpIndexScreen(
 
                     val (hourStatus, hourColor) = FormatUtils.getNoaaKpStatusAndColor(avg)
 
-                    val arrowIconRes = if (index == recentGroups.lastIndex) {
-                        R.drawable.ic_no_change
+                    val trendDescription: String
+                    val arrowIconRes: Int
+
+                    if (index == recentGroups.lastIndex) {
+                        arrowIconRes = R.drawable.ic_no_change
+                        trendDescription = "No change in Kp trend"
                     } else {
                         val prevAvg = recentGroups[index + 1].avg
+
                         when {
-                            avg > prevAvg -> R.drawable.ic_trend_up
-                            avg < prevAvg -> R.drawable.ic_trend_down
-                            else -> R.drawable.ic_no_change
+                            avg > prevAvg -> {
+                                arrowIconRes = R.drawable.ic_trend_up
+                                trendDescription = "Increasing Kp trend"
+                            }
+                            avg < prevAvg -> {
+                                arrowIconRes = R.drawable.ic_trend_down
+                                trendDescription = "Decreasing Kp trend"
+                            }
+                            else -> {
+                                arrowIconRes = R.drawable.ic_no_change
+                                trendDescription = "No change in Kp trend"
+                            }
                         }
                     }
 
                     ElevatedCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, Color(0x33FFFFFF), cardShape),
+                            .border(1.dp, Color(0x33FFFFFF), cardShape)
+                            .clearAndSetSemantics { },
                         shape = cardShape,
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surface
@@ -300,7 +324,7 @@ fun KpIndexScreen(
 
                                 Image(
                                     painter = painterResource(id = arrowIconRes),
-                                    contentDescription = "Trend Arrow",
+                                    contentDescription = trendDescription,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }

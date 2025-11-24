@@ -426,7 +426,7 @@ fun CelestiaCard(
                 text = description,
                 modifier = Modifier.padding(start = 8.dp),
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
         }

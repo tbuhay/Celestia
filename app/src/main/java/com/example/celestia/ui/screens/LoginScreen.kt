@@ -172,7 +172,11 @@ fun LoginScreen(
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = null
+                                    contentDescription = if (passwordVisible) {
+                                        "Hide password"
+                                    } else {
+                                        "Show password"
+                                    }
                                 )
                             }
                         },
@@ -192,9 +196,16 @@ fun LoginScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF1E63FF)
+                        ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Sign In", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Sign In",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onTertiary
+                        )
                     }
 
                     Spacer(Modifier.height(16.dp))
