@@ -39,10 +39,9 @@ fun SettingsToggleRow(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
 
-        // Left side: Icon + Title + Subtitle (this should wrap)
         Row(
             modifier = Modifier
-                .weight(1f)   // <-- KEY FIX: allows wrapping
+                .weight(1f)
                 .padding(end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -70,7 +69,7 @@ fun SettingsToggleRow(
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
-                    maxLines = Int.MAX_VALUE    // <-- allow wrapping
+                    maxLines = Int.MAX_VALUE
                 )
             }
         }
@@ -80,7 +79,7 @@ fun SettingsToggleRow(
             checked = checked,
             onCheckedChange = onCheckedChange,
             modifier = Modifier.semantics {
-                contentDescription = title   // ★ A11Y: Describes WHAT the switch controls
+                contentDescription = title
             }
         )
     }

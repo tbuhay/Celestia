@@ -232,7 +232,7 @@ private fun KpCard(
                 text = status,
                 modifier = Modifier.alignByBaseline(),
                 style = MaterialTheme.typography.titleMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             )
         },

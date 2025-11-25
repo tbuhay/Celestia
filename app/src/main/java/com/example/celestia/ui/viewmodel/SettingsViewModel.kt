@@ -1,6 +1,7 @@
 package com.example.celestia.ui.viewmodel
 
 import android.app.Application
+import androidx.datastore.dataStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
@@ -65,4 +66,29 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             themeManager.setUseDeviceLocation(enabled)
         }
     }
+
+    // ---------------------------------------------------------
+    // NOTIFICATION PREFERENCES
+    // ---------------------------------------------------------
+
+    // KP ALERTS
+    val kpAlertsEnabled: LiveData<Boolean> =
+        themeManager.kpAlertsEnabledFlow.asLiveData()
+
+    fun setKpAlertsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            themeManager.setKpAlertsEnabled(enabled)
+        }
+    }
+
+    // ISS ALERTS
+    val issAlertsEnabled: LiveData<Boolean> =
+        themeManager.issAlertsEnabledFlow.asLiveData()
+
+    fun setIssAlertsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            themeManager.setIssAlertsEnabled(enabled)
+        }
+    }
+
 }

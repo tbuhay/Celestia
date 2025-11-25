@@ -2,6 +2,7 @@ package com.example.celestia.ui.viewmodel
 
 import android.app.Application
 import android.util.Log
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.*
 import com.example.celestia.R
 import com.example.celestia.data.db.CelestiaDatabase
@@ -11,6 +12,8 @@ import com.example.celestia.data.model.KpReading
 import com.example.celestia.data.repository.CelestiaRepository
 import com.example.celestia.data.store.ThemeKeys
 import com.example.celestia.data.store.themeDataStore
+import com.example.celestia.utils.AppLifecycleTracker
+import com.example.celestia.notifications.NotificationHelper
 import com.example.celestia.utils.AsteroidHelper
 import com.example.celestia.utils.LunarHelper
 import com.example.celestia.utils.TimeUtils
@@ -111,6 +114,62 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                     try {
                         repo.refreshKpIndex()
                         Log.d("CelestiaVM", "NOAA data refreshed")
+
+                        // -----------------------------
+                        // KP ALERT CHECK
+                        // -----------------------------
+                        val latestKp = readings.value?.firstOrNull()?.estimatedKp ?: 0.0
+                        Log.d("KPNOTIFY", "Latest Kp: $latestKp")
+
+                        // Access DataStore
+                        val prefsFlow = getApplication<Application>().themeDataStore.data
+
+                        // Is Kp alerts toggle ON?
+                        val alertsEnabled = prefsFlow
+                            .map { it[ThemeKeys.KP_ALERTS_ENABLED] ?: false }
+                            .first()
+
+                        // What was the last Kp we alerted on?
+                        val lastAlertedKp = prefsFlow
+                            .map { it[ThemeKeys.LAST_ALERTED_KP] ?: -1f }
+                            .first()
+
+                        // Is app currently open?
+                        val isForeground = AppLifecycleTracker.isAppInForeground
+
+                        Log.d("KPNOTIFY", "alertsEnabled=$alertsEnabled, lastAlerted=$lastAlertedKp, foreground=$isForeground")
+
+                        // Condition for firing a NEW alert:
+                        val shouldAlert =
+                            alertsEnabled &&              // user enabled alerts
+                                    !isForeground &&              // app NOT open
+                                    latestKp >= 5.0 &&            // storm threshold
+                                    latestKp.toFloat() != lastAlertedKp   // Kp changed since last alert
+
+                        if (shouldAlert) {
+                            NotificationHelper.send(
+                                context = getApplication<Application>().applicationContext,
+                                title = "Kp Alert",
+                                message = "Kp Index has reached $latestKp"
+                            )
+
+                            // Save this Kp so we don't alert again until it changes
+                            viewModelScope.launch {
+                                getApplication<Application>().themeDataStore.edit {
+                                    it[ThemeKeys.LAST_ALERTED_KP] = latestKp.toFloat()
+                                }
+                            }
+                        }
+
+                        // Reset alert memory if Kp drops below 5
+                        if (latestKp < 5.0 && lastAlertedKp != -1f) {
+                            viewModelScope.launch {
+                                getApplication<Application>().themeDataStore.edit {
+                                    it[ThemeKeys.LAST_ALERTED_KP] = -1f
+                                }
+                            }
+                        }
+
                     } catch (e: Exception) {
                         Log.e("CelestiaVM", "NOAA refresh failed", e)
                     }

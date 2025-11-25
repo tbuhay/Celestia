@@ -227,6 +227,16 @@ fun SettingsScreen(
                     Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
                     SettingsActionRow(
+                        title = "Notifications",
+                        subtitle = "Manage alert preferences",
+                        icon = Icons.Default.Notifications,
+                        actionText = "Edit",
+                        onClick = { navController.navigate("notification_preferences") }
+                    )
+
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+
+                    SettingsActionRow(
                         title = "Clear Cache",
                         subtitle = "Free up storage space",
                         icon = Icons.Default.Delete,

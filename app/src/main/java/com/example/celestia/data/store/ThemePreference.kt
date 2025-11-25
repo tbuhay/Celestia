@@ -3,6 +3,7 @@ package com.example.celestia.data.store
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -12,10 +13,13 @@ val Context.themeDataStore by preferencesDataStore(name = "theme_prefs")
 object ThemeKeys {
     val DARK_MODE = booleanPreferencesKey("dark_mode_enabled")
     val TIME_FORMAT_24H = booleanPreferencesKey("use_24_hour_clock")
-
     val REFRESH_ON_LAUNCH = booleanPreferencesKey("refresh_on_launch")
-
     val USE_DEVICE_LOCATION = booleanPreferencesKey("use_device_location")
+
+    // NEW NOTIFICATION KEYS
+    val KP_ALERTS_ENABLED = booleanPreferencesKey("kp_alerts_enabled")
+    val LAST_ALERTED_KP = floatPreferencesKey("last_alerted_kp")
+    val ISS_ALERTS_ENABLED = booleanPreferencesKey("iss_alerts_enabled")
 }
 
 class ThemeManager(private val context: Context) {
@@ -49,7 +53,7 @@ class ThemeManager(private val context: Context) {
     }
 
     //-----------------------------------------
-    // NEW: REFRESH ON APP LAUNCH
+    // REFRESH ON APP LAUNCH
     //-----------------------------------------
     val refreshOnLaunchFlow: Flow<Boolean> =
         context.themeDataStore.data.map { prefs ->
@@ -62,6 +66,9 @@ class ThemeManager(private val context: Context) {
         }
     }
 
+    //-----------------------------------------
+    // DEVICE LOCATION
+    //-----------------------------------------
     val useDeviceLocationFlow: Flow<Boolean> =
         context.themeDataStore.data.map { prefs ->
             prefs[ThemeKeys.USE_DEVICE_LOCATION] ?: false
@@ -70,6 +77,43 @@ class ThemeManager(private val context: Context) {
     suspend fun setUseDeviceLocation(enabled: Boolean) {
         context.themeDataStore.edit { prefs ->
             prefs[ThemeKeys.USE_DEVICE_LOCATION] = enabled
+        }
+    }
+
+    //-----------------------------------------
+    // NOTIFICATION PREFERENCES
+    //-----------------------------------------
+    val kpAlertsEnabledFlow: Flow<Boolean> =
+        context.themeDataStore.data.map { prefs ->
+            prefs[ThemeKeys.KP_ALERTS_ENABLED] ?: false
+        }
+
+    suspend fun setKpAlertsEnabled(enabled: Boolean) {
+        context.themeDataStore.edit { prefs ->
+            prefs[ThemeKeys.KP_ALERTS_ENABLED] = enabled
+        }
+    }
+
+    // LAST KP VALUE ALERTED
+    val lastAlertedKpFlow: Flow<Float> =
+        context.themeDataStore.data.map { prefs ->
+            prefs[ThemeKeys.LAST_ALERTED_KP] ?: -1f
+        }
+
+    suspend fun setLastAlertedKp(value: Float) {
+        context.themeDataStore.edit { prefs ->
+            prefs[ThemeKeys.LAST_ALERTED_KP] = value
+        }
+    }
+
+    val issAlertsEnabledFlow: Flow<Boolean> =
+        context.themeDataStore.data.map { prefs ->
+            prefs[ThemeKeys.ISS_ALERTS_ENABLED] ?: false
+        }
+
+    suspend fun setIssAlertsEnabled(enabled: Boolean) {
+        context.themeDataStore.edit { prefs ->
+            prefs[ThemeKeys.ISS_ALERTS_ENABLED] = enabled
         }
     }
 }
