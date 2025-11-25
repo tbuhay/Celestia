@@ -29,9 +29,11 @@ import androidx.navigation.NavController
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.example.celestia.ui.viewmodel.SettingsViewModel
 import com.example.celestia.utils.FormatUtils
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import kotlinx.coroutines.delay
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,6 +53,21 @@ fun IssLocationScreen(
 
     // Load astronaut count when screen enters
     LaunchedEffect(Unit) { vm.fetchAstronauts() }
+
+    // Auto-refresh ISS
+    LaunchedEffect(Unit) {
+        while (true) {
+            vm.refresh()
+            vm.fetchAstronauts()
+            delay(2_000)
+        }
+    }
+
+    fun lerp(a: LatLng, b: LatLng, t: Float): LatLng {
+        val lat = a.latitude + (b.latitude - a.latitude) * t
+        val lng = a.longitude + (b.longitude - a.longitude) * t
+        return LatLng(lat, lng)
+    }
 
     Scaffold(
         topBar = {
@@ -182,9 +199,7 @@ fun IssLocationScreen(
             // ---------------------------------------------------------------------
             // MAP CARD
             // ---------------------------------------------------------------------
-            val issPos = remember(issReading) {
-                issReading?.let { LatLng(it.latitude, it.longitude) }
-            }
+            val issPos = issReading?.let { LatLng(it.latitude, it.longitude) }
 
             ElevatedCard(
                 modifier = Modifier
@@ -192,32 +207,84 @@ fun IssLocationScreen(
                     .height(300.dp),
                 shape = cardShape
             ) {
-
                 if (issPos != null) {
+
+                    var previousPos by remember { mutableStateOf(issPos) }
+                    var targetPos by remember { mutableStateOf(issPos) }
+                    var progress by remember { mutableFloatStateOf(1f) }
+
                     val cameraState = rememberCameraPositionState {
                         position = CameraPosition.fromLatLngZoom(issPos, 4.5f)
                     }
 
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraState
-                    ) {
-                        Marker(
-                            state = MarkerState(issPos),
-                            title = "ISS",
-                            snippet = FormatUtils.formatCoordinates(
-                                issReading!!.latitude,
-                                issReading!!.longitude
-                            )
+                    // Track map loaded state OUTSIDE Box to avoid recomposition issues
+                    var mapLoaded by remember { mutableStateOf(false) }
+
+                    Box(modifier = Modifier.fillMaxSize()) {
+
+                        GoogleMap(
+                            modifier = Modifier.matchParentSize(),
+                            cameraPositionState = cameraState,
+                            onMapLoaded = { mapLoaded = true }
+                        )
+
+                        // STATIC MARKER IN CENTER
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = "ISS Marker",
+                            tint = Color(0xFFB39DDB),
+                            modifier = Modifier
+                                .size(40.dp)
+                                .align(Alignment.Center)
                         )
                     }
+
+                    // Animate ONLY when:
+                    // - map is loaded
+                    // - ISS position is non-null
+                    LaunchedEffect(mapLoaded, issPos) {
+                        if (mapLoaded) {
+                            cameraState.animate(
+                                update = CameraUpdateFactory.newLatLng(issPos),
+                                durationMs = 1000
+                            )
+                        }
+                    }
+
+                    LaunchedEffect(issPos) {
+                        if (issPos != null && mapLoaded) {
+                            previousPos = targetPos
+                            targetPos = issPos
+                            progress = 0f
+                        }
+                    }
+
+                    LaunchedEffect(previousPos, targetPos, mapLoaded) {
+                        if (!mapLoaded) return@LaunchedEffect
+
+                        // animate for 2 seconds
+                        val duration = 2000L
+                        val startTime = System.currentTimeMillis()
+
+                        while (progress < 1f) {
+                            val elapsed = System.currentTimeMillis() - startTime
+                            progress = (elapsed / duration.toFloat()).coerceIn(0f, 1f)
+
+                            val interpolated = lerp(previousPos, targetPos, progress)
+
+                            cameraState.position = CameraPosition.fromLatLngZoom(interpolated, 4.5f)
+                            cameraState.move(CameraUpdateFactory.newLatLng(interpolated))
+
+                            delay(16) // ~60 FPS
+                        }
+                    }
+
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Loading ISS location...", color = Color.Gray)
                     }
                 }
             }
-
             // ---------------------------------------------------------------------
             // INFO CARD
             // ---------------------------------------------------------------------

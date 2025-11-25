@@ -31,6 +31,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.celestia.ui.components.SettingsActionRow
 import com.example.celestia.ui.components.SettingsToggleRow
+import com.example.celestia.ui.theme.CelestiaHazardRed
 import com.example.celestia.ui.viewmodel.AuthViewModel
 import com.example.celestia.ui.viewmodel.SettingsViewModel
 
@@ -252,7 +253,7 @@ fun SettingsScreen(
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
+                            containerColor = CelestiaHazardRed
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -262,7 +263,7 @@ fun SettingsScreen(
                         Text(
                             text = "Log Out",
                             style = MaterialTheme.typography.titleMedium.copy(
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                color = MaterialTheme.colorScheme.onTertiary
                             )
                         )
                     }
