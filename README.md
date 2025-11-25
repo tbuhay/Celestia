@@ -115,7 +115,8 @@ com.example.celestia/
 - Internet connection
 
 **1. Clone the Project**
-git clone https://github.com/your-username/celestia.git
+git clone https://github.com/tbuhay/celestia.git
+
 ```
 cd celestia
 ```
@@ -204,3 +205,9 @@ Huge thanks to these organizations for providing open-access data!
 The goal is clarity, maintainability, and real-time space data visualized in a clean and simple way.
 
 If you’re reviewing this project for a portfolio or academic evaluation — thank you!
+
+### 📦 Download APK
+➡️ **You can download the latest Celestia build here:**
+https://drive.google.com/file/d/1xMT3SFIMMMmiuCKojGqnbNyKJc5_XvZ1/view?usp=sharing
+
+*(You may need to enable "Install unknown apps" on your device.)*
