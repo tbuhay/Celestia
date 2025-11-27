@@ -21,14 +21,23 @@ class CelestiaRepository(private val dao: CelestiaDao) {
     // -------------------------------------------------------------------------
     // NOAA (Kp Index)
     // -------------------------------------------------------------------------
-    val readings: Flow<List<KpReading>> = dao.getAll()
-
+    @RequiresApi(Build.VERSION_CODES.O)
     suspend fun refreshKpIndex() {
         try {
             val newData = RetrofitInstance.noaaApi.getKpIndex()
             Log.d("CelestiaRepo.KP", "Fetched ${newData.size} Kp readings")
 
-            dao.insertAll(newData)
+            // 1️. Calculate cutoff timestamp (24 hours ago)
+            val now = java.time.LocalDateTime.now()
+            val cutoff = now.minusHours(24)
+            val cutoffString = cutoff.toString()  // exactly "YYYY-MM-DDTHH:mm:ss"
+
+            // 2️. Delete rows older than 24 hours
+            dao.deleteOlderThan(cutoffString)
+
+            // 3️. Insert new ones without overwriting existing rows
+            dao.insertOrIgnore(newData)
+
         } catch (e: Exception) {
             Log.e("CelestiaRepo.KP", "Error refreshing Kp Index", e)
         }

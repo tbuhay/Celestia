@@ -23,6 +23,14 @@ import kotlinx.coroutines.flow.Flow
     @Query("DELETE FROM kp_readings")
     suspend fun clear()
 
+    // Insert without overwriting older rows (prevents duplicates)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertOrIgnore(readings: List<KpReading>)
+
+    // Delete old rows using string-based ISO timestamp comparison
+    @Query("DELETE FROM kp_readings WHERE timestamp < :cutoffTimestamp")
+    suspend fun deleteOlderThan(cutoffTimestamp: String)
+
     // ---------------- ISS LOCATION ----------------
 
     @Query("SELECT * FROM iss_reading LIMIT 1")
