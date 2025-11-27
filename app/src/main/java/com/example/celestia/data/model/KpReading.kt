@@ -6,9 +6,8 @@ import com.google.gson.annotations.SerializedName
 
 @Entity(tableName = "kp_readings")
 data class KpReading(
-    @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
 
+    @PrimaryKey
     @SerializedName("time_tag")
     val timestamp: String,
 

@@ -1,6 +1,8 @@
 package com.example.celestia.work
 
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.datastore.preferences.core.edit
@@ -17,9 +19,10 @@ class KpAlertWorker(
     params: WorkerParameters
 ) : CoroutineWorker(ctx, params) {
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork(): Result {
         val dao = CelestiaDatabase.getInstance(ctx).dao()
-        val repo = com.example.celestia.data.repository.CelestiaRepository(dao)
+        val repo = com.example.celestia.data.repository.CelestiaRepository(dao, ctx)
 
         // Refresh Kp Index
         repo.refreshKpIndex()

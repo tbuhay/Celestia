@@ -1,5 +1,6 @@
 package com.example.celestia.data.repository
 
+import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -12,30 +13,30 @@ import com.example.celestia.utils.TimeUtils
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
-/**
- * Repository for Celestia — handles network fetching, Room persistence,
- * and unified error handling. ViewModels should only call into this class.
- */
-class CelestiaRepository(private val dao: CelestiaDao) {
+class CelestiaRepository(
+    private val dao: CelestiaDao,
+    private val context: Context
+) {
+
+    private val prefs = context.getSharedPreferences("celestia_prefs", 0)
 
     // -------------------------------------------------------------------------
     // NOAA (Kp Index)
     // -------------------------------------------------------------------------
+    val readings: Flow<List<KpReading>> = dao.getAll()
+
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun refreshKpIndex() {
         try {
             val newData = RetrofitInstance.noaaApi.getKpIndex()
             Log.d("CelestiaRepo.KP", "Fetched ${newData.size} Kp readings")
 
-            // 1️. Calculate cutoff timestamp (24 hours ago)
             val now = java.time.LocalDateTime.now()
             val cutoff = now.minusHours(24)
-            val cutoffString = cutoff.toString()  // exactly "YYYY-MM-DDTHH:mm:ss"
+            val cutoffString = cutoff.toString()
 
-            // 2️. Delete rows older than 24 hours
             dao.deleteOlderThan(cutoffString)
 
-            // 3️. Insert new ones without overwriting existing rows
             dao.insertOrIgnore(newData)
 
         } catch (e: Exception) {
@@ -62,7 +63,7 @@ class CelestiaRepository(private val dao: CelestiaDao) {
             )
 
             dao.insertIssReading(reading)
-            Log.d("CelestiaRepo.ISS", "ISS updated: lat=${reading.latitude}, lon=${reading.longitude}")
+            Log.d("CelestiaRepo.ISS", "ISS updated")
 
         } catch (e: Exception) {
             Log.e("CelestiaRepo.ISS", "Error refreshing ISS data", e)
@@ -72,12 +73,11 @@ class CelestiaRepository(private val dao: CelestiaDao) {
     // -------------------------------------------------------------------------
     // Astronauts API
     // -------------------------------------------------------------------------
-
     suspend fun getAstronautsRaw(): AstronautResponse =
         RetrofitInstance.astronautApi.getAstronauts()
 
     // -------------------------------------------------------------------------
-    // Lunar Phase API
+    // Lunar Phase
     // -------------------------------------------------------------------------
     val lunarPhase: Flow<LunarPhaseEntity?> = dao.getLunarPhase()
 
@@ -92,7 +92,6 @@ class CelestiaRepository(private val dao: CelestiaDao) {
             val updatedAt = TimeUtils.format(System.currentTimeMillis().toString())
             dao.insertLunarPhase(mapLunarToEntity(lunar, updatedAt))
 
-            Log.d("CelestiaRepo.Lunar", "Lunar phase updated successfully")
         } catch (e: Exception) {
             Log.e("CelestiaRepo.Lunar", "Error refreshing lunar data", e)
         }
@@ -111,7 +110,7 @@ class CelestiaRepository(private val dao: CelestiaDao) {
     }
 
     // -------------------------------------------------------------------------
-    // NASA NEO (Asteroids)
+    // Asteroids — Refresh Only Once Per Day
     // -------------------------------------------------------------------------
     val nextAsteroid: Flow<AsteroidApproach?> = dao.getNextAsteroid()
     val allAsteroids: Flow<List<AsteroidApproach>> = dao.getAllAsteroids()
@@ -119,6 +118,17 @@ class CelestiaRepository(private val dao: CelestiaDao) {
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun refreshAsteroids() {
         try {
+            // 1️⃣ Throttle to once per day
+            val lastRefresh = prefs.getLong("asteroids_last_refresh", 0L)
+            val now = System.currentTimeMillis()
+            val dayMillis = 24 * 60 * 60 * 1000L
+
+            if (now - lastRefresh < dayMillis) {
+                Log.d("CelestiaRepo.Asteroids", "Skipped asteroid refresh (cached)")
+                return
+            }
+
+            // 2️⃣ Fetch new asteroid feed
             val today = LocalDate.now()
             val feed = RetrofitInstance.asteroidApi.getDailyFeed(
                 startDate = today.toString(),
@@ -128,12 +138,17 @@ class CelestiaRepository(private val dao: CelestiaDao) {
 
             val asteroids = mapFeedToEntities(feed)
 
+            // 3️⃣ Replace table
             dao.clearAsteroids()
             dao.insertAsteroids(asteroids)
 
-            Log.d("CelestiaRepo.Asteroids", "Stored ${asteroids.size} asteroid entries")
+            // 4️⃣ Store timestamp
+            prefs.edit().putLong("asteroids_last_refresh", now).apply()
+
+            Log.d("CelestiaRepo.Asteroids", "Asteroids updated: ${asteroids.size}")
+
         } catch (e: Exception) {
-            Log.e("CelestiaRepo.Asteroids", "Error refreshing asteroid data", e)
+            Log.e("CelestiaRepo.Asteroids", "Error refreshing asteroids", e)
         }
     }
 

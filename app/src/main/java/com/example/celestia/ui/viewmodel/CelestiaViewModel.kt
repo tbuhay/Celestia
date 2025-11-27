@@ -1,7 +1,9 @@
 package com.example.celestia.ui.viewmodel
 
 import android.app.Application
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.*
 import com.example.celestia.R
@@ -34,7 +36,7 @@ import java.util.*
 class CelestiaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = CelestiaDatabase.getInstance(application).dao()
-    private val repo = CelestiaRepository(dao)
+    private val repo = CelestiaRepository(dao, application)
     private val prefs = application.getSharedPreferences("celestia_prefs", 0)
 
     private val fusedLocationClient =
@@ -106,6 +108,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     // Global Refresh Handler
     // -------------------------------------------------------------------------
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun refresh() {
         viewModelScope.launch {
             try {
