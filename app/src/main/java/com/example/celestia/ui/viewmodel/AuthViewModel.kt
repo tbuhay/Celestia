@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel
 import com.example.celestia.auth.AuthService
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.FirebaseUser
 import android.app.Activity
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.userProfileChangeRequest

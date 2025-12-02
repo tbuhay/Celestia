@@ -8,6 +8,7 @@ import com.example.celestia.BuildConfig
 import com.example.celestia.data.db.CelestiaDao
 import com.example.celestia.data.model.*
 import com.example.celestia.data.network.AstronautResponse
+import com.example.celestia.utils.AsteroidHelper
 import com.example.celestia.data.network.RetrofitInstance
 import com.example.celestia.utils.TimeUtils
 import kotlinx.coroutines.flow.Flow
@@ -220,17 +221,26 @@ class CelestiaRepository(
 
                 val id = "${neo.id}_$date"
 
+                // Build asteroid object first with placeholder hazard flag
+                val asteroid = AsteroidApproach(
+                    id = id,
+                    name = neo.name,
+                    approachDate = date,
+                    missDistanceKm = missKm,
+                    missDistanceAu = missAu,
+                    relativeVelocityKph = velKph,
+                    diameterMinMeters = diameter.min,
+                    diameterMaxMeters = diameter.max,
+                    isPotentiallyHazardous = false // overwritten next
+                )
+
+                // Compute true hazard classification using your rules
+                val hazardous = AsteroidHelper.isPotentiallyHazardous(asteroid)
+
+                // Store asteroid with corrected hazard flag
                 result.add(
-                    AsteroidApproach(
-                        id = id,
-                        name = neo.name,
-                        approachDate = date,
-                        missDistanceKm = missKm,
-                        missDistanceAu = missAu,
-                        relativeVelocityKph = velKph,
-                        diameterMinMeters = diameter.min,
-                        diameterMaxMeters = diameter.max,
-                        isPotentiallyHazardous = neo.isHazardous
+                    asteroid.copy(
+                        isPotentiallyHazardous = hazardous
                     )
                 )
             }

@@ -6,7 +6,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -245,7 +244,7 @@ fun SettingsScreen(
                         AlertDialog(
                             onDismissRequest = { showClearCacheDialog = false },
                             title = { Text("Clear Cache?") },
-                            text = { Text("This will delete all saved Kp Index, ISS, asteroid, and lunar data.") },
+                            text = { Text("This action will erase all saved data, including Kp Index readings, ISS locations, asteroid data, and lunar phase information. Continue?") },
                             confirmButton = {
                                 TextButton(onClick = {
                                     showClearCacheDialog = false

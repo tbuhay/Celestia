@@ -318,6 +318,8 @@ private fun AsteroidCard(
     cardShape: RoundedCornerShape,
     navController: NavController
 ) {
+    val primaryAsteroid = featuredAsteroid ?: nextAsteroid
+
     CelestiaCard(
         iconRes = R.drawable.ic_asteroid,
         iconTint = CelestiaOrange,
@@ -332,7 +334,7 @@ private fun AsteroidCard(
                     .alignByBaseline()
             )
             Text(
-                text = featuredAsteroid?.name ?: "No data",
+                text = primaryAsteroid?.name ?: "No data",
                 modifier = Modifier.alignByBaseline(),
                 style = MaterialTheme.typography.titleMedium.copy(
                     color = MaterialTheme.colorScheme.onSurface
@@ -340,10 +342,13 @@ private fun AsteroidCard(
             )
         },
         description =
-            nextAsteroid?.let {
-                val date = it.approachDate
-                val distance = String.format("%.3f AU", it.missDistanceAu)
-                "Approach: $date | $distance"
+            primaryAsteroid?.let { asteroid ->
+                val date = asteroid.approachDate
+                val distance = String.format("%.3f AU", asteroid.missDistanceAu)
+                val avgDiameter =
+                    ((asteroid.diameterMinMeters + asteroid.diameterMaxMeters) / 2).toInt()
+
+                "Approach: $date | $distance | Size: ~${avgDiameter} m"
             } ?: "Tap Reload to fetch asteroid data.",
         shape = cardShape,
         onClick = { navController.navigate("asteroid_tracking") }

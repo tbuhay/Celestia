@@ -1,7 +1,6 @@
 package com.example.celestia.ui.viewmodel
 
 import android.app.Application
-import androidx.datastore.dataStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData

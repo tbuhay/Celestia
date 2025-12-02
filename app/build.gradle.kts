@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.foundation)
+    implementation(libs.androidx.compose.ui)
     ksp(libs.androidx.room.compiler)
     implementation(libs.gson)
     implementation(libs.retrofit)
