@@ -32,6 +32,18 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     // ---------------------------------------------------------
+    // TEXT SIZE (ACCESSIBILITY)
+    // ---------------------------------------------------------
+    val textSize: LiveData<Int> =
+        themeManager.textSizeFlow.asLiveData()
+
+    fun setTextSize(size: Int) {
+        viewModelScope.launch {
+            themeManager.setTextSize(size)
+        }
+    }
+
+    // ---------------------------------------------------------
     // TIME FORMAT (12h vs 24h)
     // ---------------------------------------------------------
     val timeFormat24h: LiveData<Boolean> =
@@ -88,6 +100,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setIssAlertsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             themeManager.setIssAlertsEnabled(enabled)
+        }
+    }
+
+    fun clearCache(onFinished: () -> Unit) {
+        viewModelScope.launch {
+            themeManager.clearCache()
+            onFinished()
         }
     }
 

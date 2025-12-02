@@ -133,7 +133,7 @@ fun HomeScreen(
             )
 
             Text(
-                text = "Here’s what’s happening in the cosmos today.",
+                text = "Your space weather briefing is ready.",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
@@ -172,6 +172,11 @@ fun HomeScreen(
                     navController = navController
                 )
 
+                ViewingCard(
+                    cardShape = cardShape,
+                    navController = navController
+                )
+
             } else {
                 Text(
                     text = "No data loaded yet. Tap Reload to fetch current conditions.",
@@ -196,7 +201,7 @@ private fun getGreetingMessage(): String {
         amPm == Calendar.AM && hour12 in 5..11 -> "Good morning"
         amPm == Calendar.PM && hour12 in 0..4  -> "Good afternoon"
         amPm == Calendar.PM && hour12 in 5..10 -> "Good evening"
-        else -> "Good night"
+        else -> "Hello"
     }
 }
 
@@ -330,7 +335,7 @@ private fun LunarCard(
     CelestiaCard(
         iconRes = R.drawable.ic_moon,
         iconTint = CelestiaYellow,
-        title = "Lunar Phase",
+        title = "Moon Phase",
         mainRow = {
             Icon(
                 painter = painterResource(id = R.drawable.ic_full_moon),
@@ -355,6 +360,39 @@ private fun LunarCard(
                 "Loading lunar data...",
         shape = cardShape,
         onClick = { navController.navigate("lunar_phase") }
+    )
+}
+
+@Composable
+private fun ViewingCard(
+    cardShape: RoundedCornerShape,
+    navController: NavController
+) {
+
+    CelestiaCard(
+        iconRes = R.drawable.ic_notification,
+        iconTint = CelestiaTeal,
+        title = "Placeholder",
+        mainRow = {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_notification),
+                contentDescription = "Viewing Icon",
+                tint = CelestiaTeal,
+                modifier = Modifier
+                    .size(18.dp)
+                    .alignByBaseline()
+            )
+            Text(
+                text = "Placeholder",
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        description = "Placeholder",
+        shape = cardShape,
+        onClick = { null }
     )
 }
 

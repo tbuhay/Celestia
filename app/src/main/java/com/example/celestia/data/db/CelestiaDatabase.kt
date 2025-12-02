@@ -12,7 +12,7 @@ import com.example.celestia.data.model.LunarPhaseEntity
 @Database(entities = [KpReading::class, IssReading::class, AsteroidApproach::class, LunarPhaseEntity::class], version = 6, exportSchema = false)
 abstract class CelestiaDatabase : RoomDatabase() {
 
-    abstract fun dao(): CelestiaDao
+    abstract fun celestiaDao(): CelestiaDao
 
     companion object {
         @Volatile private var INSTANCE: CelestiaDatabase? = null

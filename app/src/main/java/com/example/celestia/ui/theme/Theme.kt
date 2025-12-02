@@ -37,13 +37,32 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun CelestiaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    textSize: Int = 1,
     content: @Composable () -> Unit
 ) {
     val colors = if (darkTheme) DarkColorScheme else LightColorScheme
 
+    val scale = when (textSize) {
+        0 -> 0.90f  // Small
+        1 -> 1.20f  // Medium (default)
+        2 -> 1.45f  // Large
+        else -> 1.00f
+    }
+
+    val scaledTypography = CelestiaTypography.copy(
+        bodySmall  = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize * scale),
+        bodyMedium = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize * scale),
+        bodyLarge  = MaterialTheme.typography.bodyLarge.copy(fontSize = MaterialTheme.typography.bodyLarge.fontSize * scale),
+        titleSmall = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize * scale),
+        titleMedium= MaterialTheme.typography.titleMedium.copy(fontSize = MaterialTheme.typography.titleMedium.fontSize * scale),
+        titleLarge = MaterialTheme.typography.titleLarge.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize * scale),
+        labelSmall = MaterialTheme.typography.labelSmall.copy(fontSize = MaterialTheme.typography.labelSmall.fontSize * scale),
+        labelMedium= MaterialTheme.typography.labelMedium.copy(fontSize = MaterialTheme.typography.labelMedium.fontSize * scale),
+        labelLarge = MaterialTheme.typography.labelLarge.copy(fontSize = MaterialTheme.typography.labelLarge.fontSize * scale),
+    )
     MaterialTheme(
         colorScheme = colors,
-        typography = CelestiaTypography,
+        typography = scaledTypography,
         content = content
     )
 }

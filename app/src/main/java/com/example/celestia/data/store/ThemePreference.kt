@@ -1,10 +1,13 @@
 package com.example.celestia.data.store
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.celestia.data.db.CelestiaDatabase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -36,6 +39,25 @@ class ThemeManager(private val context: Context) {
         context.themeDataStore.edit { prefs ->
             prefs[ThemeKeys.DARK_MODE] = enabled
         }
+    }
+
+    //-----------------------------------------
+    // FONT ADJUSTMENTS
+    //-----------------------------------------
+
+    val textSizeFlow: Flow<Int> =
+        context.themeDataStore.data.map { prefs ->
+            prefs[TEXT_SIZE_KEY] ?: 1  // 0 = Small, 1 = Medium, 2 = Large
+        }
+
+    suspend fun setTextSize(size: Int) {
+        context.themeDataStore.edit { prefs ->
+            prefs[TEXT_SIZE_KEY] = size
+        }
+    }
+
+    companion object {
+        val TEXT_SIZE_KEY = intPreferencesKey("text_size")
     }
 
     //-----------------------------------------
@@ -115,5 +137,16 @@ class ThemeManager(private val context: Context) {
         context.themeDataStore.edit { prefs ->
             prefs[ThemeKeys.ISS_ALERTS_ENABLED] = enabled
         }
+    }
+
+    suspend fun clearCache() {
+        val dao = CelestiaDatabase.getInstance(context).celestiaDao()
+
+        dao.clearKpReadings()
+        dao.clearIssReadings()
+        dao.clearAsteroids()
+        dao.clearLunarPhase()
+
+        Log.d("ThemeManager", "Cache cleared.")
     }
 }

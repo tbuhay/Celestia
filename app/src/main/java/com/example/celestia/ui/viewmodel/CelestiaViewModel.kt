@@ -1,7 +1,9 @@
 package com.example.celestia.ui.viewmodel
 
 import android.app.Application
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.*
 import com.example.celestia.R
@@ -33,8 +35,8 @@ import java.util.*
  */
 class CelestiaViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val dao = CelestiaDatabase.getInstance(application).dao()
-    private val repo = CelestiaRepository(dao)
+    private val dao = CelestiaDatabase.getInstance(application).celestiaDao()
+    private val repo = CelestiaRepository(dao, application)
     private val prefs = application.getSharedPreferences("celestia_prefs", 0)
 
     private val fusedLocationClient =
@@ -106,6 +108,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     // Global Refresh Handler
     // -------------------------------------------------------------------------
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun refresh() {
         viewModelScope.launch {
             try {
@@ -143,7 +146,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                         val shouldAlert =
                             alertsEnabled &&              // user enabled alerts
                                     !isForeground &&              // app NOT open
-                                    latestKp >= 5.0 &&            // storm threshold
+                                    latestKp >= 3.5 &&            // storm threshold
                                     latestKp.toFloat() != lastAlertedKp   // Kp changed since last alert
 
                         if (shouldAlert) {
@@ -162,7 +165,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                         }
 
                         // Reset alert memory if Kp drops below 5
-                        if (latestKp < 5.0 && lastAlertedKp != -1f) {
+                        if (latestKp < 3.5 && lastAlertedKp != -1f) {
                             viewModelScope.launch {
                                 getApplication<Application>().themeDataStore.edit {
                                     it[ThemeKeys.LAST_ALERTED_KP] = -1f
@@ -248,9 +251,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     fun fetchAstronauts() {
         viewModelScope.launch {
             try {
-                val response = repo.getAstronautsRaw()
-                val crew = response.people.filter { it.craft == "ISS" }
-                _astronautCount.value = crew.size
+                _astronautCount.value = repo.getCachedAstronautCount()
             } catch (e: Exception) {
                 _astronautCount.value = 0
             }

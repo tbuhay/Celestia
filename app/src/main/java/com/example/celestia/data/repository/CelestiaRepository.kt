@@ -1,5 +1,6 @@
 package com.example.celestia.data.repository
 
+import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -16,7 +17,10 @@ import java.time.LocalDate
  * Repository for Celestia — handles network fetching, Room persistence,
  * and unified error handling. ViewModels should only call into this class.
  */
-class CelestiaRepository(private val dao: CelestiaDao) {
+class CelestiaRepository(
+    private val dao: CelestiaDao,
+    private val context: Context
+) {
 
     // -------------------------------------------------------------------------
     // NOAA (Kp Index)
@@ -57,6 +61,31 @@ class CelestiaRepository(private val dao: CelestiaDao) {
 
         } catch (e: Exception) {
             Log.e("CelestiaRepo.ISS", "Error refreshing ISS data", e)
+        }
+    }
+
+    private val prefs = context.applicationContext.getSharedPreferences("celestia_prefs", 0)
+    suspend fun getCachedAstronautCount(): Int {
+        val lastRefresh = prefs.getLong("astronauts_last_refresh", 0L)
+        val lastCount = prefs.getInt("astronauts_last_count", -1)
+        val now = System.currentTimeMillis()
+
+        val twelveHours = 12 * 60 * 60 * 1000L
+
+        return if (now - lastRefresh < twelveHours && lastCount != -1) {
+            // Cached value still valid
+            lastCount
+        } else {
+            // Fetch new value
+            val response = RetrofitInstance.astronautApi.getAstronauts()
+            val newCount = response.people.size
+
+            prefs.edit()
+                .putInt("astronauts_last_count", newCount)
+                .putLong("astronauts_last_refresh", now)
+                .apply()
+
+            newCount
         }
     }
 

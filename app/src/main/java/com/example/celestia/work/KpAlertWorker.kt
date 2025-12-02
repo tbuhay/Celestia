@@ -18,8 +18,8 @@ class KpAlertWorker(
 ) : CoroutineWorker(ctx, params) {
 
     override suspend fun doWork(): Result {
-        val dao = CelestiaDatabase.getInstance(ctx).dao()
-        val repo = com.example.celestia.data.repository.CelestiaRepository(dao)
+        val dao = CelestiaDatabase.getInstance(ctx).celestiaDao()
+        val repo = com.example.celestia.data.repository.CelestiaRepository(dao, ctx)
 
         // Refresh Kp Index
         repo.refreshKpIndex()

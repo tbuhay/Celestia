@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.Flow
     fun getAll(): Flow<List<KpReading>>
 
     @Query("DELETE FROM kp_readings")
-    suspend fun clear()
+    suspend fun clearKpReadings()
 
     // ---------------- ISS LOCATION ----------------
 
@@ -30,6 +30,9 @@ import kotlinx.coroutines.flow.Flow
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertIssReading(reading: IssReading)
+
+    @Query("DELETE FROM iss_reading")
+    suspend fun clearIssReadings()
 
     // ---------------- ASTEROIDS ----------------
 
@@ -52,4 +55,7 @@ import kotlinx.coroutines.flow.Flow
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLunarPhase(entity: LunarPhaseEntity)
+
+    @Query("DELETE FROM lunar_phase")
+    suspend fun clearLunarPhase()
 }

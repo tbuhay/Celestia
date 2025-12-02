@@ -63,12 +63,6 @@ fun IssLocationScreen(
         }
     }
 
-    fun lerp(a: LatLng, b: LatLng, t: Float): LatLng {
-        val lat = a.latitude + (b.latitude - a.latitude) * t
-        val lng = a.longitude + (b.longitude - a.longitude) * t
-        return LatLng(lat, lng)
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -101,7 +95,7 @@ fun IssLocationScreen(
                     .border(1.dp, Color(0x33FFFFFF), cardShape),
                 shape = cardShape,
                 colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
                 Column(
@@ -138,7 +132,7 @@ fun IssLocationScreen(
                             Text("International Space Station", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 "Live Position",
-                                style = MaterialTheme.typography.labelSmall.copy(color = Color.LightGray)
+                                style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
                             )
                         }
                     }
@@ -290,7 +284,10 @@ fun IssLocationScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, Color(0x33FFFFFF), cardShape),
-                shape = cardShape
+                shape = cardShape,
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),

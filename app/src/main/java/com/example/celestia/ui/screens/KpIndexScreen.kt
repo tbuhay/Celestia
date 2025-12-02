@@ -179,7 +179,7 @@ fun KpIndexScreen(
                 // Kp scale explanation (NOAA style)
                 item {
                     Text(
-                        text = "NOAA Kp Scale: 0–1 Quiet | 2–3 Unsettled | 4 Active | 5 Minor Storm | 6 Major Storm | 7–9 Severe/Extreme",
+                        text = "NOAA Kp Scale: 0–1 Calm | 2–3 Unsettled | 4 Active | 5 Minor Storm | 6 Major Storm | 7–9 Severe/Extreme Storm",
                         style = MaterialTheme.typography.labelSmall.copy(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         ),
