@@ -36,8 +36,12 @@ class MainActivity : ComponentActivity() {
 
             val settingsVM: SettingsViewModel = viewModel()
             val darkModeEnabled = settingsVM.darkModeEnabled.observeAsState(initial = true).value
+            val textSize = settingsVM.textSize.observeAsState(initial = 1).value
 
-            CelestiaTheme(darkTheme = darkModeEnabled) {
+            CelestiaTheme(
+                darkTheme = darkModeEnabled,
+                textSize = textSize
+            ) {
 
                 val navController = rememberNavController()
                 val celestiaVM: CelestiaViewModel = viewModel()

@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -70,11 +74,10 @@ fun SettingsScreen(
     authVM: AuthViewModel = viewModel(),
     settingsVM: SettingsViewModel = viewModel()
 ) {
-    // Observe Dark Mode setting
     val isDark by settingsVM.darkModeEnabled.observeAsState(true)
     val use24h by settingsVM.timeFormat24h.observeAsState(true)
+    val textSize by settingsVM.textSize.observeAsState(1)
     val scrollState = rememberScrollState()
-
     val context = LocalContext.current
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -125,7 +128,7 @@ fun SettingsScreen(
         ) {
 
             // ----------------------------------------------------
-            // PREFERENCES SECTION
+            // PREFERENCES
             // ----------------------------------------------------
             Text(
                 text = "Preferences",
@@ -137,7 +140,6 @@ fun SettingsScreen(
             CelestiaSettingsCard {
                 Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
 
-                    // Dark Mode
                     SettingsToggleRow(
                         title = "Dark Mode",
                         subtitle = "Use dark theme",
@@ -146,9 +148,8 @@ fun SettingsScreen(
                         onCheckedChange = { settingsVM.setDarkMode(it) }
                     )
 
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                    // Auto Refresh
                     val refreshOnLaunch by settingsVM.refreshOnLaunchEnabled.observeAsState(false)
 
                     SettingsToggleRow(
@@ -159,7 +160,7 @@ fun SettingsScreen(
                         onCheckedChange = { settingsVM.setRefreshOnLaunch(it) }
                     )
 
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     SettingsToggleRow(
                         title = "24-Hour Time",
@@ -169,33 +170,28 @@ fun SettingsScreen(
                         onCheckedChange = { settingsVM.setTimeFormat(it) }
                     )
 
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     val useDeviceLocation by settingsVM.deviceLocationEnabled.observeAsState(false)
 
                     SettingsToggleRow(
                         title = "Use Device Location",
-                        subtitle = "Get lunar phase data using your actual location",
+                        subtitle = "Get moon phase data using your actual location",
                         icon = Icons.Default.Public,
                         checked = useDeviceLocation,
                         onCheckedChange = { enabled ->
-
                             if (enabled) {
-                                // User wants to turn ON — ask for permission first
                                 val hasPermission = ContextCompat.checkSelfPermission(
                                     context,
                                     android.Manifest.permission.ACCESS_FINE_LOCATION
                                 ) == PackageManager.PERMISSION_GRANTED
 
-                                if (hasPermission) {
-                                    settingsVM.setUseDeviceLocation(true)
-                                } else {
-                                    locationPermissionLauncher.launch(
-                                        android.Manifest.permission.ACCESS_FINE_LOCATION
-                                    )
-                                }
+                                if (hasPermission) settingsVM.setUseDeviceLocation(true)
+                                else locationPermissionLauncher.launch(
+                                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                                )
+
                             } else {
-                                // User turned it OFF
                                 settingsVM.setUseDeviceLocation(false)
                             }
                         }
@@ -204,7 +200,52 @@ fun SettingsScreen(
             }
 
             // ----------------------------------------------------
-            // DATA & STORAGE SECTION
+            // ACCESSIBILITY (NEW)
+            // ----------------------------------------------------
+            Text(
+                text = "Accessibility",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+
+            CelestiaSettingsCard {
+                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+
+                    Text(
+                        "Text Size",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+
+                    val options = listOf("Small", "Medium", "Large")
+
+                    options.forEachIndexed { index, label ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable { settingsVM.setTextSize(index) }
+                        ) {
+                            RadioButton(
+                                selected = textSize == index,
+                                onClick = { settingsVM.setTextSize(index) }
+                            )
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ----------------------------------------------------
+            // DATA & STORAGE
             // ----------------------------------------------------
             Text(
                 text = "Data & Storage",
@@ -217,16 +258,6 @@ fun SettingsScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
                     SettingsActionRow(
-                        title = "Units",
-                        subtitle = "Metric",
-                        icon = Icons.Default.Public,
-                        actionText = "Change",
-                        onClick = { }
-                    )
-
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
-
-                    SettingsActionRow(
                         title = "Notifications",
                         subtitle = "Manage alert preferences",
                         icon = Icons.Default.Notifications,
@@ -234,14 +265,39 @@ fun SettingsScreen(
                         onClick = { navController.navigate("notification_preferences") }
                     )
 
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                    var showClearCacheDialog by remember { mutableStateOf(false) }
+
+                    if (showClearCacheDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showClearCacheDialog = false },
+                            title = { Text("Clear Cache?") },
+                            text = { Text("This will delete all saved Kp Index, ISS, asteroid, and lunar data.") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    showClearCacheDialog = false
+                                    settingsVM.clearCache {
+                                        Toast.makeText(context, "Cache cleared", Toast.LENGTH_SHORT).show()
+                                    }
+                                }) {
+                                    Text("Confirm")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showClearCacheDialog = false }) {
+                                    Text("Cancel")
+                                }
+                            }
+                        )
+                    }
 
                     SettingsActionRow(
                         title = "Clear Cache",
                         subtitle = "Free up storage space",
                         icon = Icons.Default.Delete,
                         actionText = "Clear",
-                        onClick = { }
+                        onClick = { showClearCacheDialog = true }
                     )
                 }
             }
@@ -290,7 +346,7 @@ fun SettingsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "Ⓒ 2025 Celestia",
+                        "© 2025 Celestia",
                         style = MaterialTheme.typography.titleMedium.copy(
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -302,10 +358,10 @@ fun SettingsScreen(
                         )
                     )
                     Text(
-                            "Developed by Tyler Buhay",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        "Developed by Tyler Buhay",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
                     Text(
                         "Built with data from NOAA, NASA, and other space agencies",

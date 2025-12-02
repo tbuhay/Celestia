@@ -35,7 +35,7 @@ import java.util.*
  */
 class CelestiaViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val dao = CelestiaDatabase.getInstance(application).dao()
+    private val dao = CelestiaDatabase.getInstance(application).celestiaDao()
     private val repo = CelestiaRepository(dao, application)
     private val prefs = application.getSharedPreferences("celestia_prefs", 0)
 
@@ -146,7 +146,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                         val shouldAlert =
                             alertsEnabled &&              // user enabled alerts
                                     !isForeground &&              // app NOT open
-                                    latestKp >= 5.0 &&            // storm threshold
+                                    latestKp >= 3.5 &&            // storm threshold
                                     latestKp.toFloat() != lastAlertedKp   // Kp changed since last alert
 
                         if (shouldAlert) {
@@ -165,7 +165,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                         }
 
                         // Reset alert memory if Kp drops below 5
-                        if (latestKp < 5.0 && lastAlertedKp != -1f) {
+                        if (latestKp < 3.5 && lastAlertedKp != -1f) {
                             viewModelScope.launch {
                                 getApplication<Application>().themeDataStore.edit {
                                     it[ThemeKeys.LAST_ALERTED_KP] = -1f
@@ -251,11 +251,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     fun fetchAstronauts() {
         viewModelScope.launch {
             try {
-                val response = repo.getAstronautsRaw()
-
-                // Count ALL humans in space (ISS + Tiangong + any other craft)
-                _astronautCount.value = response.people.size
-
+                _astronautCount.value = repo.getCachedAstronautCount()
             } catch (e: Exception) {
                 _astronautCount.value = 0
             }

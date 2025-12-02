@@ -54,6 +54,15 @@ fun IssLocationScreen(
     // Load astronaut count when screen enters
     LaunchedEffect(Unit) { vm.fetchAstronauts() }
 
+    // Auto-refresh ISS
+    LaunchedEffect(Unit) {
+        while (true) {
+            vm.refresh()
+            vm.fetchAstronauts()
+            delay(2_000)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -64,15 +73,7 @@ fun IssLocationScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background),
-                actions = {
-                    IconButton(onClick = {
-                        vm.refresh()
-                        vm.fetchAstronauts()
-                    }) {
-                        Icon(Icons.Default.Refresh, "Refresh")
-                    }
-                }
+                    containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
@@ -94,7 +95,7 @@ fun IssLocationScreen(
                     .border(1.dp, Color(0x33FFFFFF), cardShape),
                 shape = cardShape,
                 colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
                 Column(
@@ -131,7 +132,7 @@ fun IssLocationScreen(
                             Text("International Space Station", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 "Live Position",
-                                style = MaterialTheme.typography.labelSmall.copy(color = Color.LightGray)
+                                style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
                             )
                         }
                     }
@@ -184,9 +185,7 @@ fun IssLocationScreen(
             // ---------------------------------------------------------------------
             // MAP CARD
             // ---------------------------------------------------------------------
-            val issPos = remember(issReading) {
-                issReading?.let { LatLng(it.latitude, it.longitude) }
-            }
+            val issPos = issReading?.let { LatLng(it.latitude, it.longitude) }
 
             ElevatedCard(
                 modifier = Modifier
@@ -194,25 +193,84 @@ fun IssLocationScreen(
                     .height(300.dp),
                 shape = cardShape
             ) {
-
                 if (issPos != null) {
+
+                    // Track map gestures
+                    var isUserInteracting by remember { mutableStateOf(false) }
+
+                    // Keep previous & target positions for smooth interpolation
+                    var previousPos by remember { mutableStateOf(issPos) }
+                    var targetPos by remember { mutableStateOf(issPos) }
+                    var progress by remember { mutableFloatStateOf(1f) }
+
+                    // Map camera state
                     val cameraState = rememberCameraPositionState {
                         position = CameraPosition.fromLatLngZoom(issPos, 4.5f)
                     }
 
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraState
-                    ) {
-                        Marker(
-                            state = MarkerState(issPos),
-                            title = "ISS",
-                            snippet = FormatUtils.formatCoordinates(
-                                issReading!!.latitude,
-                                issReading!!.longitude
-                            )
+                    // Track map loaded
+                    var mapLoaded by remember { mutableStateOf(false) }
+
+                    Box(modifier = Modifier.fillMaxSize()) {
+
+                        GoogleMap(
+                            modifier = Modifier.matchParentSize(),
+                            cameraPositionState = cameraState,
+                            onMapLoaded = { mapLoaded = true }
                         )
+
+                        // STATIC ICON (center marker)
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = "ISS Marker",
+                            tint = Color(0xFFB39DDB),
+                            modifier = Modifier
+                                .size(40.dp)
+                                .align(Alignment.Center)
+                        )
+
+                        // Detect when user is moving the map (pan/zoom)
+                        LaunchedEffect(cameraState.isMoving) {
+                            isUserInteracting = cameraState.isMoving
+                        }
                     }
+
+                    // Update interpolation targets when ISS moves
+                    LaunchedEffect(issPos) {
+                        if (mapLoaded) {
+                            previousPos = targetPos
+                            targetPos = issPos
+                            progress = 0f
+                        }
+                    }
+
+                    // Smoothly animate ISS movement at 60FPS
+                    LaunchedEffect(previousPos, targetPos, mapLoaded) {
+                        if (!mapLoaded) return@LaunchedEffect
+
+                        val duration = 1200L  // smooth but shorter than refresh
+                        val startTime = System.currentTimeMillis()
+
+                        while (progress < 1f) {
+
+                            // Break out if user is interacting (restore zoom!)
+                            if (isUserInteracting) break
+
+                            val elapsed = System.currentTimeMillis() - startTime
+                            progress = (elapsed / duration.toFloat()).coerceIn(0f, 1f)
+
+                            val interpolated = LatLng(
+                                previousPos.latitude + (targetPos.latitude - previousPos.latitude) * progress,
+                                previousPos.longitude + (targetPos.longitude - previousPos.longitude) * progress
+                            )
+
+                            cameraState.position = CameraPosition.fromLatLngZoom(interpolated, cameraState.position.zoom)
+                            cameraState.move(CameraUpdateFactory.newLatLng(interpolated))
+
+                            delay(16) // ~60FPS
+                        }
+                    }
+
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Loading ISS location...", color = Color.Gray)
@@ -226,7 +284,10 @@ fun IssLocationScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, Color(0x33FFFFFF), cardShape),
-                shape = cardShape
+                shape = cardShape,
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),

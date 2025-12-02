@@ -105,7 +105,7 @@ fun LunarPhaseScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Lunar Phase",
+                        "Moon Phase",
                         style = MaterialTheme.typography.titleLarge.copy(
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -139,12 +139,12 @@ fun LunarPhaseScreen(
             // Loading / Error
             when {
                 isLoading -> Text(
-                    "Loading current lunar data...",
+                    "Loading current moon data...",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 errorMessage != null -> Text(
-                    errorMessage ?: "Error loading lunar data",
+                    errorMessage ?: "Error loading moon data",
                     color = MaterialTheme.colorScheme.error
                 )
             }
@@ -170,7 +170,7 @@ fun LunarPhaseScreen(
                     )
 
                     Text(
-                        "Current Lunar Phase",
+                        "Current Moon Phase",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

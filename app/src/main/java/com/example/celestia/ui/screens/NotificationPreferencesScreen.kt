@@ -53,7 +53,7 @@ fun NotificationPreferencesScreen(
             // KP Alerts
             NotificationToggleCard(
                 title = "Kp Index Alerts",
-                description = "Receive alerts when Kp Index is 5 or higher (Minor Storm).",
+                description = "Receive alerts when Kp Index is 3.5 or higher (Minor Storm).",
                 enabled = kpAlertsEnabled,
                 icon = Icons.Default.Bolt,
                 onToggle = { settingsVM.setKpAlertsEnabled(it) }
