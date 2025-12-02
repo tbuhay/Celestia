@@ -9,6 +9,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.FirebaseUser
 import android.app.Activity
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.userProfileChangeRequest
 
 /**
@@ -175,5 +176,58 @@ class AuthViewModel : ViewModel() {
         firebaseAuth.signOut()
         _isAuthenticated.value = false
         _userName.value = null
+    }
+
+    // --------------------------------------------------------
+    // ACCOUNT UPDATES (Email, Password, Name)
+    // --------------------------------------------------------
+
+    fun updateDisplayName(newName: String, onResult: (Boolean, String?) -> Unit) {
+        val user = firebaseAuth.currentUser ?: return onResult(false, "Not logged in")
+
+        val updates = userProfileChangeRequest {
+            displayName = newName
+        }
+
+        user.updateProfile(updates)
+            .addOnSuccessListener {
+                _userName.value = newName
+                onResult(true, null)
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message)
+            }
+    }
+
+    fun updateEmail(newEmail: String, password: String, onResult: (Boolean, String?) -> Unit) {
+        val user = firebaseAuth.currentUser ?: return onResult(false, "Not logged in")
+
+        val credential = EmailAuthProvider.getCredential(user.email!!, password)
+
+        user.reauthenticate(credential)
+            .addOnSuccessListener {
+                user.updateEmail(newEmail)
+                    .addOnSuccessListener { onResult(true, null) }
+                    .addOnFailureListener { e -> onResult(false, e.message) }
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message)
+            }
+    }
+
+    fun updatePassword(currentPassword: String, newPassword: String, onResult: (Boolean, String?) -> Unit) {
+        val user = firebaseAuth.currentUser ?: return onResult(false, "Not logged in")
+
+        val credential = EmailAuthProvider.getCredential(user.email!!, currentPassword)
+
+        user.reauthenticate(credential)
+            .addOnSuccessListener {
+                user.updatePassword(newPassword)
+                    .addOnSuccessListener { onResult(true, null) }
+                    .addOnFailureListener { e -> onResult(false, e.message) }
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message)
+            }
     }
 }

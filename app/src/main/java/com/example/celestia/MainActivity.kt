@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.celestia.ui.screens.AccountScreen
 import com.example.celestia.ui.screens.AsteroidTrackingScreen
 import com.example.celestia.ui.screens.LunarPhaseScreen
 import com.example.celestia.ui.screens.HomeScreen
@@ -112,6 +113,7 @@ class MainActivity : ComponentActivity() {
                     composable("notification_preferences") {
                         NotificationPreferencesScreen(navController)
                     }
+                    composable("account") { AccountScreen(navController) }
                 }
             }
         }

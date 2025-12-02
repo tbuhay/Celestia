@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -150,10 +151,10 @@ fun SettingsScreen(
         ) {
 
             // ----------------------------------------------------
-            // PREFERENCES SECTION
+            // APPEARANCE & ACCESSIBILITY SECTION
             // ----------------------------------------------------
             Text(
-                text = "Preferences",
+                text = "Appearance & Accessibility",
                 style = MaterialTheme.typography.titleMedium.copy(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -162,7 +163,6 @@ fun SettingsScreen(
             CelestiaSettingsCard {
                 Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
 
-                    // Dark Mode toggle
                     SettingsToggleRow(
                         title = "Dark Mode",
                         subtitle = "Use dark theme",
@@ -173,19 +173,6 @@ fun SettingsScreen(
 
                     Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                    // Refresh on launch toggle
-                    val refreshOnLaunch by settingsVM.refreshOnLaunchEnabled.observeAsState(false)
-                    SettingsToggleRow(
-                        title = "Refresh on Launch",
-                        subtitle = "Update data automatically when opening the app",
-                        icon = Icons.Default.Refresh,
-                        checked = refreshOnLaunch,
-                        onCheckedChange = { settingsVM.setRefreshOnLaunch(it) }
-                    )
-
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                    // 24-hour clock formatting
                     SettingsToggleRow(
                         title = "24-Hour Time",
                         subtitle = if (use24h) "Using 24-hour format" else "Using AM/PM format",
@@ -196,67 +183,32 @@ fun SettingsScreen(
 
                     Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                    // Device location toggle
-                    val useDeviceLocation by settingsVM.deviceLocationEnabled.observeAsState(false)
-                    SettingsToggleRow(
-                        title = "Use Device Location",
-                        subtitle = "Get moon phase data using your actual location",
-                        icon = Icons.Default.Public,
-                        checked = useDeviceLocation,
-                        onCheckedChange = { enabled ->
-                            if (enabled) {
-                                val hasPermission = ContextCompat.checkSelfPermission(
-                                    context,
-                                    android.Manifest.permission.ACCESS_FINE_LOCATION
-                                ) == PackageManager.PERMISSION_GRANTED
+                    // TEXT SIZE DROPDOWN ROW
+                    var expanded by remember { mutableStateOf(false) }
+                    val options = listOf("Small", "Medium", "Large")
 
-                                if (hasPermission) settingsVM.setUseDeviceLocation(true)
-                                else locationPermissionLauncher.launch(
-                                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                    Box {
+                        SettingsActionRow(
+                            title = "Text Size",
+                            subtitle = options[textSize],
+                            icon = Icons.Default.TextFields,
+                            actionText = options[textSize], // <-- Shows selected size
+                            onClick = { expanded = true }
+                        )
+
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            options.forEachIndexed { index, label ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        settingsVM.setTextSize(index)
+                                        expanded = false
+                                    }
                                 )
-                            } else {
-                                settingsVM.setUseDeviceLocation(false)
                             }
-                        }
-                    )
-                }
-            }
-
-            // ----------------------------------------------------
-            // ACCESSIBILITY SECTION
-            // ----------------------------------------------------
-            Text(
-                text = "Accessibility",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-
-            CelestiaSettingsCard {
-                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-
-                    Text("Text Size", style = MaterialTheme.typography.titleMedium)
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        val options = listOf("Small", "Medium", "Large")
-
-                        options.forEachIndexed { index, label ->
-                            AssistChip(
-                                onClick = { settingsVM.setTextSize(index) },
-                                label = { Text(label) },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor =
-                                        if (textSize == index)
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        else
-                                            MaterialTheme.colorScheme.surfaceVariant
-                                )
-                            )
                         }
                     }
                 }
@@ -319,18 +271,78 @@ fun SettingsScreen(
                         actionText = "Clear",
                         onClick = { showClearCacheDialog = true }
                     )
+
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                    val refreshOnLaunch by settingsVM.refreshOnLaunchEnabled.observeAsState(false)
+                    SettingsToggleRow(
+                        title = "Refresh on Launch",
+                        subtitle = "Update data automatically when opening the app",
+                        icon = Icons.Default.Refresh,
+                        checked = refreshOnLaunch,
+                        onCheckedChange = { settingsVM.setRefreshOnLaunch(it) }
+                    )
+
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                    val useDeviceLocation by settingsVM.deviceLocationEnabled.observeAsState(false)
+                    SettingsToggleRow(
+                        title = "Use Device Location",
+                        subtitle = "Get moon phase data using your actual location",
+                        icon = Icons.Default.Public,
+                        checked = useDeviceLocation,
+                        onCheckedChange = { enabled ->
+                            if (enabled) {
+                                val hasPermission = ContextCompat.checkSelfPermission(
+                                    context,
+                                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                                ) == PackageManager.PERMISSION_GRANTED
+
+                                if (hasPermission) settingsVM.setUseDeviceLocation(true)
+                                else locationPermissionLauncher.launch(
+                                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                                )
+                            } else {
+                                settingsVM.setUseDeviceLocation(false)
+                            }
+                        }
+                    )
                 }
             }
 
             // ----------------------------------------------------
-            // LOGOUT SECTION
+            // ACCOUNT SETTINGS & LOGOUT SECTION
             // ----------------------------------------------------
+            Text(
+                text = "Account & Security",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+
             CelestiaSettingsCard {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.Center,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // ACCOUNT SETTINGS BUTTON
+                    Button(
+                        onClick = { navController.navigate("account") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text(
+                            text = "Account Settings",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+                    }
+
+                    // LOGOUT BUTTON
                     Button(
                         onClick = {
                             authVM.logout()

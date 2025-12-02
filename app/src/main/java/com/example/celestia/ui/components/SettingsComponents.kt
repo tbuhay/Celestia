@@ -122,7 +122,7 @@ fun SettingsActionRow(
             Icon(
                 icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.width(12.dp))
 
