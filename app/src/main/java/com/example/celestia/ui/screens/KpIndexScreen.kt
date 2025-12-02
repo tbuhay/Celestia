@@ -1,5 +1,7 @@
 package com.example.celestia.ui.screens
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,29 +30,57 @@ import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.example.celestia.ui.viewmodel.SettingsViewModel
 import com.example.celestia.utils.FormatUtils
 
+/**
+ * Screen displaying detailed Kp Index information, including:
+ *
+ * - Current NOAA Kp value
+ * - NOAA storm status + severity color coding
+ * - High/low values from the most recent set of readings
+ * - Human-readable storm description
+ * - Hourly grouped Kp readings (trend up, down, or stable)
+ * - Timestamp of last refresh, respecting 12h/24h user settings
+ *
+ * This screen is fed by:
+ * [CelestiaViewModel.readings]              ← raw readings
+ * [CelestiaViewModel.groupedKp]             ← hourly aggregates
+ * [CelestiaViewModel.lastUpdated]           ← timestamp of refresh
+ *
+ * @param navController Used for navigation back to the dashboard.
+ * @param vm ViewModel providing NOAA readings & grouped data.
+ */
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KpIndexScreen(
     navController: NavController,
     vm: CelestiaViewModel = viewModel()
 ) {
+    // User settings (12h / 24h)
     val settingsVM: SettingsViewModel = viewModel()
     val use24h by settingsVM.timeFormat24h.observeAsState(true)
 
+    // Raw NOAA data
     val readings by vm.readings.observeAsState(emptyList())
+
+    // Grouped hourly data from ViewModel
     val grouped by vm.groupedKp.observeAsState(emptyList())
+
+    // Last refresh timestamp
     val lastUpdatedRaw by vm.lastUpdated.observeAsState("Never")
 
     val cardShape = RoundedCornerShape(14.dp)
 
+    /**
+     * Convert timestamp based on user's preferred format.
+     */
     val lastUpdated = remember(lastUpdatedRaw, use24h) {
-        if (lastUpdatedRaw == "Never") {
-            "Never"
-        } else {
-            FormatUtils.convertTimeFormat(lastUpdatedRaw, use24h)
-        }
+        if (lastUpdatedRaw == "Never") "Never"
+        else FormatUtils.convertTimeFormat(lastUpdatedRaw, use24h)
     }
 
+    /**
+     * Limit grouped readings to the most recent 12 hours.
+     */
     val recentGroups = remember(grouped) { grouped.take(12) }
 
     Scaffold(
@@ -90,6 +120,9 @@ fun KpIndexScreen(
         ) {
             val latest = vm.getLatestValidKp(readings)
 
+            // ================================================================
+            // No Data Available
+            // ================================================================
             if (latest == null) {
                 item {
                     Text(
@@ -103,80 +136,25 @@ fun KpIndexScreen(
                 }
             } else {
 
-                // --- CURRENT KP (NOAA SCALE) ---
+                // ================================================================
+                // CURRENT KP INDEX SUMMARY CARD
+                // ================================================================
                 val kp = latest.estimatedKp
                 val (status, statusColor, description) = FormatUtils.getNoaaKpInfo(kp)
 
-                // Current KP card
                 item {
-                    ElevatedCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, Color(0x33FFFFFF), cardShape)
-                            .clearAndSetSemantics { },
-                        shape = cardShape,
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-
-                            Text(
-                                text = "Current Kp Index",
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    color = MaterialTheme.colorScheme.primary
-                                ),
-                            )
-
-                            Text(
-                                text = kp.toString(),
-                                style = MaterialTheme.typography.headlineLarge.copy(
-                                    color = statusColor
-                                )
-                            )
-
-                            Text(
-                                text = status,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    color = statusColor
-                                ),
-                                modifier = Modifier.semantics {
-                                    contentDescription = "Kp index status: $status"
-                                }
-                            )
-
-                            Text(
-                                text = description,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
-                                )
-                            )
-
-                            val high = readings.maxOfOrNull { it.estimatedKp } ?: kp
-                            val low = readings.minOfOrNull { it.estimatedKp } ?: kp
-
-                            Text(
-                                text = "High: $high  |  Low: $low",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                )
-                            )
-
-                            Text(
-                                text = "Last updated: $lastUpdated",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                            )
-                        }
-                    }
+                    KpSummaryCard(
+                        kp = kp,
+                        readings = readings,
+                        status = status,
+                        statusColor = statusColor,
+                        description = description,
+                        lastUpdated = lastUpdated,
+                        cardShape = cardShape
+                    )
                 }
 
-                // Kp scale explanation (NOAA style)
+                // NOAA scale reference text
                 item {
                     Text(
                         text = "NOAA Kp Scale: 0–1 Calm | 2–3 Unsettled | 4 Active | 5 Minor Storm | 6 Major Storm | 7–9 Severe/Extreme Storm",
@@ -188,12 +166,14 @@ fun KpIndexScreen(
                     )
                 }
 
-                // Short explanation card
+                // ================================================================
+                // Description Card (What Is the Kp Index?)
+                // ================================================================
                 item {
                     ElevatedCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clearAndSetSemantics { },
+                            .clearAndSetSemantics {},
                         shape = cardShape,
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surface
@@ -210,7 +190,9 @@ fun KpIndexScreen(
                     }
                 }
 
-                // Recent readings header
+                // ================================================================
+                // RECENT GROUPED READINGS
+                // ================================================================
                 item {
                     Text(
                         "Recent Readings",
@@ -220,120 +202,212 @@ fun KpIndexScreen(
                     )
                 }
 
-                // Recent grouped readings (hourly aggregates)
                 itemsIndexed(recentGroups) { index, triple ->
-
                     val hour = triple.hour
                     val avg = triple.avg
                     val high = triple.high
                     val low = triple.low
 
+                    // Color-code based on NOAA status for avg Kp
                     val (hourStatus, hourColor) = FormatUtils.getNoaaKpStatusAndColor(avg)
 
-                    val trendDescription: String
-                    val arrowIconRes: Int
-
-                    if (index == recentGroups.lastIndex) {
-                        arrowIconRes = R.drawable.ic_no_change
-                        trendDescription = "No change in Kp trend"
-                    } else {
-                        val prevAvg = recentGroups[index + 1].avg
-
-                        when {
-                            avg > prevAvg -> {
-                                arrowIconRes = R.drawable.ic_trend_up
-                                trendDescription = "Increasing Kp trend"
-                            }
-                            avg < prevAvg -> {
-                                arrowIconRes = R.drawable.ic_trend_down
-                                trendDescription = "Decreasing Kp trend"
-                            }
-                            else -> {
-                                arrowIconRes = R.drawable.ic_no_change
-                                trendDescription = "No change in Kp trend"
-                            }
-                        }
+                    // Determine trend direction
+                    val (arrowRes, trendLabel) = when {
+                        index == recentGroups.lastIndex -> R.drawable.ic_no_change to "No change"
+                        avg > recentGroups[index + 1].avg -> R.drawable.ic_trend_up to "Increasing Kp trend"
+                        avg < recentGroups[index + 1].avg -> R.drawable.ic_trend_down to "Decreasing Kp trend"
+                        else -> R.drawable.ic_no_change to "No change in Kp trend"
                     }
 
-                    ElevatedCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, Color(0x33FFFFFF), cardShape)
-                            .clearAndSetSemantics { },
-                        shape = cardShape,
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp)
-                        ) {
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        text = String.format("%.2f", avg),
-                                        style = MaterialTheme.typography.headlineSmall.copy(
-                                            color = hourColor
-                                        )
-                                    )
-                                    Text(
-                                        text = hourStatus,
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    )
-                                }
-
-                                Text(
-                                    text = FormatUtils.formatTime(
-                                        hour.toInstant().toEpochMilli(),
-                                        use24h
-                                    ),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                    ),
-                                    textAlign = TextAlign.End
-                                )
-                            }
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-
-                                Text(
-                                    text = "High: ${"%.2f".format(high)} | Low: ${"%.2f".format(low)}",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                    )
-                                )
-
-                                Image(
-                                    painter = painterResource(id = arrowIconRes),
-                                    contentDescription = trendDescription,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                        }
-                    }
+                    KpHourlyCard(
+                        avg = avg,
+                        high = high,
+                        low = low,
+                        hourStatus = hourStatus,
+                        hourColor = hourColor,
+                        arrowIconRes = arrowRes,
+                        trendDescription = trendLabel,
+                        epochMillis = hour.toInstant().toEpochMilli(),
+                        use24h = use24h,
+                        cardShape = cardShape
+                    )
                 }
             }
         }
     }
 }
 
+/**
+ * Card showing the current Kp Index with:
+ * - Large numeric Kp value
+ * - NOAA status text + color
+ * - Status description
+ * - High/Low values from raw readings
+ * - Timestamp of last update
+ */
+@Composable
+private fun KpSummaryCard(
+    kp: Double,
+    readings: List<com.example.celestia.data.model.KpReading>,
+    status: String,
+    statusColor: Color,
+    description: String,
+    lastUpdated: String,
+    cardShape: RoundedCornerShape
+) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Color(0x33FFFFFF), cardShape)
+            .clearAndSetSemantics {},
+        shape = cardShape,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
 
+            Text(
+                text = "Current Kp Index",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    color = MaterialTheme.colorScheme.primary
+                )
+            )
+
+            Text(
+                text = kp.toString(),
+                style = MaterialTheme.typography.headlineLarge.copy(color = statusColor)
+            )
+
+            Text(
+                text = status,
+                style = MaterialTheme.typography.titleMedium.copy(color = statusColor),
+                modifier = Modifier.semantics {
+                    contentDescription = "Kp index status: $status"
+                }
+            )
+
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                )
+            )
+
+            val high = readings.maxOfOrNull { it.estimatedKp } ?: kp
+            val low = readings.minOfOrNull { it.estimatedKp } ?: kp
+
+            Text(
+                text = "High: $high  |  Low: $low",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            )
+
+            Text(
+                text = "Last updated: $lastUpdated",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            )
+        }
+    }
+}
+
+/**
+ * Card representing a single hourly group of Kp readings.
+ * Shows:
+ * - Hourly average (NOAA color-coded)
+ * - Status label
+ * - Timestamp of the hour
+ * - High/Low values within that hour
+ * - Trend indicator (arrow up, down, none)
+ */
+@Composable
+private fun KpHourlyCard(
+    avg: Double,
+    high: Double,
+    low: Double,
+    hourStatus: String,
+    hourColor: Color,
+    arrowIconRes: Int,
+    trendDescription: String,
+    epochMillis: Long,
+    use24h: Boolean,
+    cardShape: RoundedCornerShape
+) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Color(0x33FFFFFF), cardShape)
+            .clearAndSetSemantics {},
+        shape = cardShape,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = String.format("%.2f", avg),
+                        style = MaterialTheme.typography.headlineSmall.copy(color = hourColor)
+                    )
+                    Text(
+                        text = hourStatus,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
+
+                Text(
+                    text = FormatUtils.formatTime(epochMillis, use24h),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    ),
+                    textAlign = TextAlign.End
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Text(
+                    text = "High: ${"%.2f".format(high)} | Low: ${"%.2f".format(low)}",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                )
+
+                Image(
+                    painter = painterResource(id = arrowIconRes),
+                    contentDescription = trendDescription,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+    }
+}

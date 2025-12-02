@@ -35,8 +35,19 @@ import java.util.Locale
 // -----------------------------------------------------------------------------
 // Phase Card
 // -----------------------------------------------------------------------------
-@Composable
 
+/**
+ * A reusable Celestia-styled card layout used throughout the Lunar Phase screen.
+ *
+ * This card:
+ * - Provides a rounded elevated surface
+ * - Includes a subtle outline border
+ * - Applies consistent padding and styling
+ *
+ * @param modifier Optional modifier for sizing and layout control.
+ * @param content ColumnScope content inside the card.
+ */
+@Composable
 fun CelestiaPhaseCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
@@ -64,42 +75,67 @@ fun CelestiaPhaseCard(
 // -----------------------------------------------------------------------------
 // Lunar Phase Screen
 // -----------------------------------------------------------------------------
+
+/**
+ * Screen displaying detailed lunar phase information including:
+ *
+ * - Current moon phase name and icon
+ * - Illumination percentage
+ * - Moon age (days since new moon)
+ * - Distance from Earth
+ * - Moonrise & moonset times (12h/24h based on user settings)
+ * - Timestamp of last update
+ * - Days until next full moon & new moon
+ *
+ * Data is sourced from:
+ * [CelestiaViewModel.lunarPhase], [CelestiaViewModel.isLunarLoading],
+ * [CelestiaViewModel.lunarUpdated], and lunar helper utilities.
+ *
+ * This screen also uses [CelestiaPhaseCard] to maintain a unified look.
+ *
+ * @param navController Navigation controller for screen transitions.
+ * @param vm Main Celestia ViewModel providing lunar data and helpers.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LunarPhaseScreen(
     navController: NavController,
     vm: CelestiaViewModel = viewModel()
 ) {
+    // Live lunar data states
     val lunarPhase by vm.lunarPhase.observeAsState()
     val isLoading by vm.isLunarLoading.observeAsState(false)
     val errorMessage by vm.lunarError.observeAsState()
     val updatedText by vm.lunarUpdated.observeAsState("Unknown")
 
-// User preferences
+    // User time format settings
     val settingsVM: SettingsViewModel = viewModel()
     val use24h = settingsVM.timeFormat24h.observeAsState(true).value
 
-// Phase properties
+    // Extract lunar properties
     val phaseName = LunarHelper.formatMoonPhaseName(lunarPhase?.moonPhase)
     val illumination = LunarHelper.parseIlluminationPercent(lunarPhase)
     val ageDays = vm.getMoonAge()
     val distanceKm = lunarPhase?.moonDistanceKm
 
-// Rise/Set
+    // Rise/Set formatting
     val moonriseRaw = lunarPhase?.moonRise ?: "N/A"
     val moonsetRaw = lunarPhase?.moonSet ?: "N/A"
     val formattedMoonrise = FormatUtils.convertLunarTime(moonriseRaw, use24h)
     val formattedMoonset = FormatUtils.convertLunarTime(moonsetRaw, use24h)
 
-// Icon
+    // Phase icon
     val moonIconRes = vm.getMoonPhaseIconRes(lunarPhase?.moonPhase)
 
-// Refresh on screen load
+    /**
+     * Refresh lunar data on initial screen load.
+     */
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vm.refresh()
         }
     }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -136,7 +172,9 @@ fun LunarPhaseScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
-            // Loading / Error
+            // ---------------------------------------------------------
+            // LOADING / ERROR STATE
+            // ---------------------------------------------------------
             when {
                 isLoading -> Text(
                     "Loading current moon data...",
@@ -149,7 +187,9 @@ fun LunarPhaseScreen(
                 )
             }
 
+            // ---------------------------------------------------------
             // MAIN PHASE CARD
+            // ---------------------------------------------------------
             CelestiaPhaseCard {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -176,7 +216,9 @@ fun LunarPhaseScreen(
                 }
             }
 
+            // ---------------------------------------------------------
             // CURRENT DETAILS CARD
+            // ---------------------------------------------------------
             CelestiaPhaseCard {
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -196,7 +238,7 @@ fun LunarPhaseScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Row 1
+                // Row 1 — Illumination & Age
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -222,7 +264,7 @@ fun LunarPhaseScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // Row 2
+                // Row 2 — Distance & Updated Time
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -250,7 +292,9 @@ fun LunarPhaseScreen(
                 }
             }
 
-            // TODAY'S SCHEDULE
+            // ---------------------------------------------------------
+            // TODAY’S SCHEDULE (Moonrise / Moonset)
+            // ---------------------------------------------------------
             CelestiaPhaseCard {
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -296,7 +340,9 @@ fun LunarPhaseScreen(
                 }
             }
 
-            // UPCOMING PHASES
+            // ---------------------------------------------------------
+            // UPCOMING PHASES (Full & New Moon countdowns)
+            // ---------------------------------------------------------
             CelestiaPhaseCard {
 
                 Text(
@@ -315,7 +361,7 @@ fun LunarPhaseScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Full Moon
+                    // Full Moon countdown
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -331,7 +377,7 @@ fun LunarPhaseScreen(
                         )
                     }
 
-                    // New Moon
+                    // New Moon countdown
                     Column(
                         modifier = Modifier
                             .weight(1f)

@@ -20,12 +20,8 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -39,9 +35,17 @@ import com.example.celestia.ui.theme.CelestiaHazardRed
 import com.example.celestia.ui.viewmodel.AuthViewModel
 import com.example.celestia.ui.viewmodel.SettingsViewModel
 
-// -----------------------------------------------------------------------------
-//  Shared Celestia Settings Card (Theme-Aware)
-// -----------------------------------------------------------------------------
+/**
+ * A reusable settings card styled specifically for Celestia.
+ *
+ * Provides:
+ * - A rounded elevated surface
+ * - A subtle outline border
+ * - A unified layout for all settings sections
+ *
+ * @param modifier Optional layout modifier.
+ * @param content The column content of the card.
+ */
 @Composable
 fun CelestiaSettingsCard(
     modifier: Modifier = Modifier,
@@ -67,6 +71,22 @@ fun CelestiaSettingsCard(
     }
 }
 
+/**
+ * Main Settings screen for Celestia.
+ *
+ * Includes categories:
+ * - **Preferences**: Dark mode, refresh on launch, 24-hour time, device location.
+ * - **Accessibility**: Text size options.
+ * - **Data & Storage**: Notification preferences + clearing cache.
+ * - **Account Management**: Logout action.
+ * - **App Info**: Version and credits.
+ *
+ * This screen persists user choices with DataStore-backed [SettingsViewModel].
+ *
+ * @param navController Used for navigating back or to notification preferences.
+ * @param authVM Handles logging out of the user.
+ * @param settingsVM Accesses and updates user settings.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -74,12 +94,14 @@ fun SettingsScreen(
     authVM: AuthViewModel = viewModel(),
     settingsVM: SettingsViewModel = viewModel()
 ) {
+    // Preference states
     val isDark by settingsVM.darkModeEnabled.observeAsState(true)
     val use24h by settingsVM.timeFormat24h.observeAsState(true)
     val textSize by settingsVM.textSize.observeAsState(1)
-    val scrollState = rememberScrollState()
+    val scrollState: ScrollState = rememberScrollState()
     val context = LocalContext.current
 
+    // Permission launcher for enabling device location
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -128,7 +150,7 @@ fun SettingsScreen(
         ) {
 
             // ----------------------------------------------------
-            // PREFERENCES
+            // PREFERENCES SECTION
             // ----------------------------------------------------
             Text(
                 text = "Preferences",
@@ -140,6 +162,7 @@ fun SettingsScreen(
             CelestiaSettingsCard {
                 Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
 
+                    // Dark Mode toggle
                     SettingsToggleRow(
                         title = "Dark Mode",
                         subtitle = "Use dark theme",
@@ -150,8 +173,8 @@ fun SettingsScreen(
 
                     Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
+                    // Refresh on launch toggle
                     val refreshOnLaunch by settingsVM.refreshOnLaunchEnabled.observeAsState(false)
-
                     SettingsToggleRow(
                         title = "Refresh on Launch",
                         subtitle = "Update data automatically when opening the app",
@@ -162,6 +185,7 @@ fun SettingsScreen(
 
                     Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
+                    // 24-hour clock formatting
                     SettingsToggleRow(
                         title = "24-Hour Time",
                         subtitle = if (use24h) "Using 24-hour format" else "Using AM/PM format",
@@ -172,8 +196,8 @@ fun SettingsScreen(
 
                     Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
+                    // Device location toggle
                     val useDeviceLocation by settingsVM.deviceLocationEnabled.observeAsState(false)
-
                     SettingsToggleRow(
                         title = "Use Device Location",
                         subtitle = "Get moon phase data using your actual location",
@@ -190,7 +214,6 @@ fun SettingsScreen(
                                 else locationPermissionLauncher.launch(
                                     android.Manifest.permission.ACCESS_FINE_LOCATION
                                 )
-
                             } else {
                                 settingsVM.setUseDeviceLocation(false)
                             }
@@ -200,7 +223,7 @@ fun SettingsScreen(
             }
 
             // ----------------------------------------------------
-            // ACCESSIBILITY (NEW)
+            // ACCESSIBILITY SECTION
             // ----------------------------------------------------
             Text(
                 text = "Accessibility",
@@ -245,7 +268,7 @@ fun SettingsScreen(
             }
 
             // ----------------------------------------------------
-            // DATA & STORAGE
+            // DATA & STORAGE SECTION
             // ----------------------------------------------------
             Text(
                 text = "Data & Storage",
@@ -257,6 +280,7 @@ fun SettingsScreen(
             CelestiaSettingsCard {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
+                    // Navigate to notification preference screen
                     SettingsActionRow(
                         title = "Notifications",
                         subtitle = "Manage alert preferences",
@@ -267,6 +291,7 @@ fun SettingsScreen(
 
                     Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
+                    // Clear cache confirmation dialog
                     var showClearCacheDialog by remember { mutableStateOf(false) }
 
                     if (showClearCacheDialog) {
@@ -303,7 +328,7 @@ fun SettingsScreen(
             }
 
             // ----------------------------------------------------
-            // LOGOUT BUTTON
+            // LOGOUT SECTION
             // ----------------------------------------------------
             CelestiaSettingsCard {
                 Column(
@@ -337,7 +362,7 @@ fun SettingsScreen(
             }
 
             // ----------------------------------------------------
-            // APP INFO
+            // APP INFO SECTION
             // ----------------------------------------------------
             CelestiaSettingsCard {
                 Column(

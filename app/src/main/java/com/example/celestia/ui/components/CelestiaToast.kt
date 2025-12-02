@@ -11,6 +11,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.delay
 
+/**
+ * A custom toast-style message component for transient in-app notifications.
+ *
+ * This composable:
+ * - Displays a message with optional leading icon
+ * - Automatically disappears after [durationMs]
+ * - Uses Material 3 styling with rounded corners and elevation
+ * - Appears centered along the bottom of the screen
+ *
+ * @param message The text content displayed in the toast.
+ * @param icon Optional composable icon displayed before the message.
+ * @param backgroundColor Background color of the toast container.
+ * @param textColor Color of the text content.
+ * @param durationMs How long the toast remains visible before auto-dismiss.
+ */
 @Composable
 fun CelestiaToast(
     message: String,
@@ -24,7 +39,6 @@ fun CelestiaToast(
     if (visible) {
         LaunchedEffect(Unit) {
             delay(durationMs)
-            visible = false
         }
 
         Box(

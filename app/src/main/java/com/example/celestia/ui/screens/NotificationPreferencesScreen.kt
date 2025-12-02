@@ -14,12 +14,25 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.celestia.ui.viewmodel.SettingsViewModel
 
+/**
+ * Screen allowing users to toggle notification preferences within Celestia.
+ *
+ * Users can enable/disable:
+ * - **Kp Index Alerts** — Fired when geomagnetic activity reaches storm levels.
+ * - **ISS Alerts** — Fired when the ISS is overhead or a relevant event occurs.
+ *
+ * These preferences are persisted using [SettingsViewModel] and DataStore.
+ *
+ * @param navController Navigation controller for returning to previous screens.
+ * @param settingsVM ViewModel managing notification preference state.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationPreferencesScreen(
     navController: NavController,
     settingsVM: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
+    // Observed states for toggles
     val kpAlertsEnabled by settingsVM.kpAlertsEnabled.observeAsState(false)
     val issAlertsEnabled by settingsVM.issAlertsEnabled.observeAsState(false)
 
@@ -33,11 +46,12 @@ fun NotificationPreferencesScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -50,7 +64,7 @@ fun NotificationPreferencesScreen(
                 style = MaterialTheme.typography.titleLarge
             )
 
-            // KP Alerts
+            // Kp Index Alerts toggle
             NotificationToggleCard(
                 title = "Kp Index Alerts",
                 description = "Receive alerts when Kp Index is 3.5 or higher (Minor Storm).",
@@ -59,7 +73,7 @@ fun NotificationPreferencesScreen(
                 onToggle = { settingsVM.setKpAlertsEnabled(it) }
             )
 
-            // ISS Alerts
+            // ISS Alerts toggle
             NotificationToggleCard(
                 title = "ISS Alerts",
                 description = "Receive alerts when the ISS is overhead or at key events.",
@@ -71,6 +85,21 @@ fun NotificationPreferencesScreen(
     }
 }
 
+/**
+ * A reusable card component displaying a single notification toggle option.
+ *
+ * Each card provides:
+ * - An icon
+ * - A title describing the alert
+ * - A short explanation
+ * - A switch for enabling or disabling the alert
+ *
+ * @param title The name of the alert category.
+ * @param description Extra information describing when the alert is triggered.
+ * @param enabled Current toggle state.
+ * @param icon Icon representing the alert type (e.g., lightning = Kp).
+ * @param onToggle Callback fired when the user toggles the switch.
+ */
 @Composable
 private fun NotificationToggleCard(
     title: String,
@@ -86,8 +115,7 @@ private fun NotificationToggleCard(
         )
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp),
+            modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
 

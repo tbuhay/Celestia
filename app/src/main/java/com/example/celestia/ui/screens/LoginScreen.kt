@@ -39,6 +39,24 @@ import com.google.android.gms.common.api.ApiException
 import com.example.celestia.R
 
 
+/**
+ * Login screen for Celestia.
+ *
+ * Features:
+ * - Email + password authentication
+ * - Google Sign-In (OAuth) using Firebase
+ * - GitHub Login via Firebase OAuth provider
+ * - Input validation with toast feedback
+ * - Automatic redirection to Home upon successful login
+ * - Password visibility toggle
+ *
+ * This screen interacts with:
+ * - [AuthViewModel] for authentication logic
+ * - [NavController] for navigation to Home/Register screens
+ *
+ * When the user signs in successfully:
+ * The navigation stack clears `"login"` so pressing Back does not return here.
+ */
 @Composable
 fun LoginScreen(
     navController: NavController,
@@ -47,11 +65,16 @@ fun LoginScreen(
     val context = LocalContext.current
     val activity = context as Activity
 
+    // Initialize the AuthService inside the ViewModel
     LaunchedEffect(Unit) { vm.init(context) }
 
-    // -------------------------
-    // GOOGLE LAUNCHER
-    // -------------------------
+    // ---------------------------------------------------------
+    // GOOGLE SIGN-IN CONFIGURATION
+    // ---------------------------------------------------------
+    /**
+     * GoogleSignInOptions + GoogleSignInClient are remembered so
+     * they persist across recompositions.
+     */
     val gso = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(context.getString(R.string.default_web_client_id))
@@ -61,8 +84,16 @@ fun LoginScreen(
 
     val googleClient = remember { GoogleSignIn.getClient(context, gso) }
 
+    // Toast message container
     var toastMessage by remember { mutableStateOf<String?>(null) }
 
+    /**
+     * Launcher for Google OAuth flow.
+     * Handles:
+     * - Starting Google sign-in intent
+     * - Reading returned ID token
+     * - Passing token into ViewModel for Firebase login
+     */
     val googleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -76,15 +107,19 @@ fun LoginScreen(
         }
     }
 
-    // -------------------------
-    // STATE
-    // -------------------------
+    // ---------------------------------------------------------
+    // SCREEN STATE
+    // ---------------------------------------------------------
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
     val isAuthenticated by vm.isAuthenticated.observeAsState(false)
     val errorMessage by vm.errorMessage.observeAsState()
 
+    /**
+     * Navigate to home once authenticated.
+     * Clears login screen from the back stack.
+     */
     LaunchedEffect(isAuthenticated) {
         if (isAuthenticated) {
             navController.navigate("home") {
@@ -93,12 +128,16 @@ fun LoginScreen(
         }
     }
 
+    /**
+     * Display error messages from ViewModel as toast notifications.
+     */
     LaunchedEffect(errorMessage) {
         errorMessage?.let { toastMessage = it; vm.clearError() }
     }
 
-
-    // --------------------- UI ---------------------
+    // ---------------------------------------------------------
+    // UI LAYOUT
+    // ---------------------------------------------------------
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -111,10 +150,21 @@ fun LoginScreen(
                 )
             )
     ) {
+        // Center card container
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
+
+            /**
+             * Main login card
+             * Contains:
+             * - Title
+             * - Email/password form
+             * - Login button
+             * - Navigation to registration
+             * - Google + GitHub sign-in options
+             */
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
@@ -124,6 +174,7 @@ fun LoginScreen(
                 ),
                 elevation = CardDefaults.elevatedCardElevation(8.dp)
             ) {
+
                 Column(
                     modifier = Modifier
                         .padding(24.dp)
@@ -131,6 +182,9 @@ fun LoginScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
+                    // ---------------------------------------------------------
+                    // HEADER TEXT
+                    // ---------------------------------------------------------
                     Text(
                         "Welcome to Celestia",
                         style = MaterialTheme.typography.headlineSmall.copy(
@@ -149,7 +203,9 @@ fun LoginScreen(
                         modifier = Modifier.padding(bottom = 24.dp)
                     )
 
-                    // Email
+                    // ---------------------------------------------------------
+                    // EMAIL FIELD
+                    // ---------------------------------------------------------
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -160,23 +216,22 @@ fun LoginScreen(
 
                     Spacer(Modifier.height(12.dp))
 
-                    // Password
+                    // ---------------------------------------------------------
+                    // PASSWORD FIELD
+                    // ---------------------------------------------------------
                     var passwordVisible by remember { mutableStateOf(false) }
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
                         label = { Text("Password") },
                         singleLine = true,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        visualTransformation = if (passwordVisible)
+                            VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (passwordVisible) {
-                                        "Hide password"
-                                    } else {
-                                        "Show password"
-                                    }
+                                    contentDescription = if (passwordVisible) "Hide password" else "Show password"
                                 )
                             }
                         },
@@ -185,6 +240,9 @@ fun LoginScreen(
 
                     Spacer(Modifier.height(20.dp))
 
+                    // ---------------------------------------------------------
+                    // LOGIN BUTTON
+                    // ---------------------------------------------------------
                     Button(
                         onClick = {
                             when {
@@ -201,7 +259,8 @@ fun LoginScreen(
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Sign In",
+                        Text(
+                            "Sign In",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onTertiary
@@ -216,17 +275,19 @@ fun LoginScreen(
 
                     Spacer(Modifier.height(20.dp))
 
-                    // --------------------------
-                    // SOCIAL SIGN-IN BUTTONS
-                    // --------------------------
-
+                    // ---------------------------------------------------------
+                    // GOOGLE LOGIN BUTTON
+                    // ---------------------------------------------------------
                     Button(
                         onClick = {
+                            // Always sign out before launching, avoids cached account issues
                             googleClient.signOut().addOnCompleteListener {
                                 googleLauncher.launch(googleClient.signInIntent)
                             }
                         },
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
                         shape = RoundedCornerShape(25.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFD9D9D9)
@@ -246,9 +307,14 @@ fun LoginScreen(
 
                     Spacer(Modifier.height(12.dp))
 
+                    // ---------------------------------------------------------
+                    // GITHUB LOGIN BUTTON
+                    // ---------------------------------------------------------
                     Button(
                         onClick = { vm.githubLogin(activity) },
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
                         shape = RoundedCornerShape(25.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFD9D9D9)
@@ -269,6 +335,9 @@ fun LoginScreen(
             }
         }
 
+        // ---------------------------------------------------------
+        // TOAST FEEDBACK (Custom Celestia style)
+        // ---------------------------------------------------------
         toastMessage?.let { msg ->
             Box(
                 modifier = Modifier
@@ -282,6 +351,7 @@ fun LoginScreen(
                 )
             }
 
+            // Auto-dismiss after 2 seconds
             LaunchedEffect(msg) {
                 delay(2000)
                 toastMessage = null
