@@ -252,8 +252,10 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             try {
                 val response = repo.getAstronautsRaw()
-                val crew = response.people.filter { it.craft == "ISS" }
-                _astronautCount.value = crew.size
+
+                // Count ALL humans in space (ISS + Tiangong + any other craft)
+                _astronautCount.value = response.people.size
+
             } catch (e: Exception) {
                 _astronautCount.value = 0
             }
