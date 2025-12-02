@@ -26,8 +26,6 @@ import androidx.navigation.NavController
 import com.example.celestia.R
 import com.example.celestia.data.model.AsteroidApproach
 import com.example.celestia.ui.theme.CelestiaHazardRed
-import com.example.celestia.ui.theme.CelestiaHazardRedLight
-import com.example.celestia.ui.theme.TextPrimary
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

@@ -83,7 +83,7 @@ fun CelestiaTheme(
     // Text scaling logic
     val scale = when (textSize) {
         0 -> 0.90f  // Small
-        1 -> 1.20f  // Medium (default experience)
+        1 -> 1.10f  // Medium (default experience)
         2 -> 1.45f  // Large — accessibility optimized
         else -> 1.00f
     }

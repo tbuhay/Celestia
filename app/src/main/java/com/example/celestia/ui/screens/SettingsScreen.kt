@@ -235,31 +235,26 @@ fun SettingsScreen(
             CelestiaSettingsCard {
                 Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
 
-                    Text(
-                        "Text Size",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    )
+                    Text("Text Size", style = MaterialTheme.typography.titleMedium)
 
-                    val options = listOf("Small", "Medium", "Large")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        val options = listOf("Small", "Medium", "Large")
 
-                    options.forEachIndexed { index, label ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable { settingsVM.setTextSize(index) }
-                        ) {
-                            RadioButton(
-                                selected = textSize == index,
-                                onClick = { settingsVM.setTextSize(index) }
-                            )
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurface
+                        options.forEachIndexed { index, label ->
+                            AssistChip(
+                                onClick = { settingsVM.setTextSize(index) },
+                                label = { Text(label) },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor =
+                                        if (textSize == index)
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        else
+                                            MaterialTheme.colorScheme.surfaceVariant
                                 )
                             )
                         }
