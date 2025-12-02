@@ -135,14 +135,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     // ------------------ ISS Alerts ------------------
 
-    /** Whether ISS proximity / event alerts are enabled. */
-    val issAlertsEnabled: LiveData<Boolean> =
-        themeManager.issAlertsEnabledFlow.asLiveData()
+    val issProximityEnabled: LiveData<Boolean> =
+        themeManager.issProximityEnabledFlow.asLiveData()
 
-    /** Enables/disables ISS notifications. */
-    fun setIssAlertsEnabled(enabled: Boolean) {
+    fun setIssProximityEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            themeManager.setIssAlertsEnabled(enabled)
+            themeManager.setIssProximityEnabled(enabled)
         }
     }
 

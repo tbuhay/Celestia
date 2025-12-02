@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.celestia.data.db.CelestiaDatabase
 import kotlinx.coroutines.flow.Flow
@@ -31,6 +32,9 @@ object ThemeKeys {
     val KP_ALERTS_ENABLED = booleanPreferencesKey("kp_alerts_enabled")
     val LAST_ALERTED_KP = floatPreferencesKey("last_alerted_kp")
     val ISS_ALERTS_ENABLED = booleanPreferencesKey("iss_alerts_enabled")
+    val ISS_PROXIMITY_ENABLED = booleanPreferencesKey("iss_proximity_enabled")
+    val LAST_ISS_DISTANCE = floatPreferencesKey("last_iss_distance")
+    val LAST_ISS_PROX_ALERT = longPreferencesKey("last_iss_prox_alert")
 }
 
 /**
@@ -168,16 +172,36 @@ class ThemeManager(private val context: Context) {
         }
     }
 
-    /** Flow emitting whether ISS alerts are enabled. */
-    val issAlertsEnabledFlow: Flow<Boolean> =
+    val issProximityEnabledFlow: Flow<Boolean> =
         context.themeDataStore.data.map { prefs ->
-            prefs[ThemeKeys.ISS_ALERTS_ENABLED] ?: false
+            prefs[ThemeKeys.ISS_PROXIMITY_ENABLED] ?: false
         }
 
-    /** Saves whether ISS alerts are enabled. */
-    suspend fun setIssAlertsEnabled(enabled: Boolean) {
+    suspend fun setIssProximityEnabled(enabled: Boolean) {
         context.themeDataStore.edit { prefs ->
-            prefs[ThemeKeys.ISS_ALERTS_ENABLED] = enabled
+            prefs[ThemeKeys.ISS_PROXIMITY_ENABLED] = enabled
+        }
+    }
+
+    val lastIssDistanceFlow: Flow<Float> =
+        context.themeDataStore.data.map { prefs ->
+            prefs[ThemeKeys.LAST_ISS_DISTANCE] ?: Float.MAX_VALUE
+        }
+
+    suspend fun setLastIssDistance(distance: Float) {
+        context.themeDataStore.edit { prefs ->
+            prefs[ThemeKeys.LAST_ISS_DISTANCE] = distance
+        }
+    }
+
+    val lastIssProxAlertFlow: Flow<Long> =
+        context.themeDataStore.data.map { prefs ->
+            prefs[ThemeKeys.LAST_ISS_PROX_ALERT] ?: 0L
+        }
+
+    suspend fun setLastIssProxAlert(timestamp: Long) {
+        context.themeDataStore.edit { prefs ->
+            prefs[ThemeKeys.LAST_ISS_PROX_ALERT] = timestamp
         }
     }
 

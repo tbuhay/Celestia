@@ -170,7 +170,7 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                 // ------------------ ISS POSITION -------------------
                 launch {
                     try {
-                        repo.refreshIssData()
+                        repo.refreshIssLocation()
                         Log.d("CelestiaVM", "ISS data refreshed")
                     } catch (e: Exception) {
                         Log.e("CelestiaVM", "ISS refresh failed", e)
@@ -233,9 +233,8 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                     latestKp.toFloat() != lastAlertedKp
 
         if (shouldAlert) {
-            NotificationHelper.send(
+            NotificationHelper.sendKpNotification(
                 context = getApplication<Application>().applicationContext,
-                title = "Kp Alert",
                 message = "Kp Index has reached $latestKp"
             )
 

@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
@@ -14,9 +15,13 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.celestia.ui.viewmodel.SettingsViewModel
+import com.example.celestia.work.CelestiaAlertWorker
 
 /**
  * Screen allowing users to toggle notification preferences within Celestia.
@@ -38,7 +43,8 @@ fun NotificationPreferencesScreen(
 ) {
     // Observed states for toggles
     val kpAlertsEnabled by settingsVM.kpAlertsEnabled.observeAsState(false)
-    val issAlertsEnabled by settingsVM.issAlertsEnabled.observeAsState(false)
+    val issProximityEnabled by settingsVM.issProximityEnabled.observeAsState(false)
+
 
     Scaffold(
         topBar = {
@@ -79,12 +85,24 @@ fun NotificationPreferencesScreen(
 
             // ISS Alerts toggle
             NotificationToggleCard(
-                title = "ISS Alerts",
-                description = "Receive alerts when the ISS is overhead or at key events.",
-                enabled = issAlertsEnabled,
-                icon = Icons.Default.Public,
-                onToggle = { settingsVM.setIssAlertsEnabled(it) }
+                title = "ISS Proximity Alerts",
+                description = "Receive alerts when the ISS comes within close range of your location.",
+                enabled = issProximityEnabled,
+                icon = Icons.Default.LocationOn,
+                onToggle = { settingsVM.setIssProximityEnabled(it) }
             )
+            val context = LocalContext.current
+
+//            Button(
+//                onClick = {
+//                    val test = OneTimeWorkRequestBuilder<CelestiaAlertWorker>().build()
+//
+//                    WorkManager.getInstance(context)
+//                        .enqueue(test)
+//                }
+//            ) {
+//                Text("Test Alerts")
+//            }
         }
     }
 }

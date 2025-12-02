@@ -4,7 +4,7 @@ import android.app.Application
 import com.example.celestia.utils.AppLifecycleTracker
 import androidx.work.*
 import java.util.concurrent.TimeUnit
-import com.example.celestia.work.KpAlertWorker
+import com.example.celestia.work.CelestiaAlertWorker
 
 /**
  * Custom Application class for Celestia.
@@ -34,7 +34,7 @@ class CelestiaApplication : Application() {
         // ---------------------------------------------------------------------
 
         val workRequest =
-            PeriodicWorkRequestBuilder<KpAlertWorker>(15, TimeUnit.MINUTES)
+            PeriodicWorkRequestBuilder<CelestiaAlertWorker>(15, TimeUnit.MINUTES)
                 .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
