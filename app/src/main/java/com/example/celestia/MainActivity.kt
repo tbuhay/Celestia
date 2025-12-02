@@ -24,16 +24,38 @@ import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.example.celestia.ui.viewmodel.SettingsViewModel
 import com.google.firebase.FirebaseApp
 
+/**
+ * Main entry point for Celestia.
+ *
+ * Responsibilities:
+ * - Initializes Firebase
+ * - Applies global theming (dark/light mode + text scaling)
+ * - Sets up the navigation graph and destinations
+ * - Routes users to Login or Home depending on authentication state
+ * - Handles deep-link style navigation from notifications via
+ *   `intent.getStringExtra("navigate_to")`
+ *
+ * This activity hosts all Compose UI screens.
+ */
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // If launched from a notification, the target route is included here.
         val navigateTo = intent.getStringExtra("navigate_to")
+
+        // Required once for Firebase Auth + any other Firebase services.
         FirebaseApp.initializeApp(this)
+
+        // Use full edge-to-edge layout for immersive UI.
         enableEdgeToEdge()
 
         setContent {
 
+            // ---------------------------------------------------------
+            // THEME + ACCESSIBILITY (text scaling)
+            // ---------------------------------------------------------
             val settingsVM: SettingsViewModel = viewModel()
             val darkModeEnabled = settingsVM.darkModeEnabled.observeAsState(initial = true).value
             val textSize = settingsVM.textSize.observeAsState(initial = 1).value
@@ -43,12 +65,22 @@ class MainActivity : ComponentActivity() {
                 textSize = textSize
             ) {
 
+                // ---------------------------------------------------------
+                // NAVIGATION SETUP
+                // ---------------------------------------------------------
                 val navController = rememberNavController()
                 val celestiaVM: CelestiaViewModel = viewModel()
 
+                // Determine start screen based on whether user is signed in.
                 val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
                 val startDestination = if (firebaseUser != null) "home" else "login"
 
+                // ---------------------------------------------------------
+                // NOTIFICATION NAVIGATION HANDLER
+                //
+                // If a user taps a system notification (e.g., "Kp Alert"),
+                // Celestia opens directly to the correct screen.
+                // ---------------------------------------------------------
                 if (navigateTo != null) {
                     LaunchedEffect(Unit) {
                         navController.navigate(navigateTo) {
@@ -57,19 +89,25 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                // ---------------------------------------------------------
+                // NAVIGATION GRAPH
+                // ---------------------------------------------------------
                 NavHost(
                     navController = navController,
                     startDestination = startDestination
                 ) {
+                    // Authentication
                     composable("login") { LoginScreen(navController) }
                     composable("register") { RegisterScreen(navController) }
 
+                    // Dashboard & Screens
                     composable("home") { HomeScreen(navController, celestiaVM) }
                     composable("kp_index") { KpIndexScreen(navController, celestiaVM) }
                     composable("iss_location") { IssLocationScreen(navController, celestiaVM) }
                     composable("asteroid_tracking") { AsteroidTrackingScreen(navController) }
                     composable("lunar_phase") { LunarPhaseScreen(navController) }
 
+                    // Settings
                     composable("settings") { SettingsScreen(navController) }
                     composable("notification_preferences") {
                         NotificationPreferencesScreen(navController)

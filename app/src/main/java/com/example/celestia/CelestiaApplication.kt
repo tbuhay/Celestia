@@ -6,25 +6,51 @@ import androidx.work.*
 import java.util.concurrent.TimeUnit
 import com.example.celestia.work.KpAlertWorker
 
+/**
+ * Custom Application class for Celestia.
+ *
+ * This class performs global, app-wide initialization such as:
+ *
+ * - Registering [AppLifecycleTracker] to monitor foreground/background state
+ * - Scheduling background workers (Kp Index alert checks via WorkManager)
+ *
+ * WorkManager allows Celestia to deliver Kp Index alerts even when
+ * the app is fully closed, ensuring reliable background notifications.
+ */
 class CelestiaApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // ---------------------------------------------------------------------
+        // 1. Track app foreground / background state
+        // ---------------------------------------------------------------------
         AppLifecycleTracker.init()
 
-//        val workRequest =
-//            PeriodicWorkRequestBuilder<KpAlertWorker>(15, TimeUnit.MINUTES)
-//                .build()
-//
-//        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-//            "kpAlertWork",
-//            ExistingPeriodicWorkPolicy.UPDATE,
-//            workRequest
-//        )
+        // ---------------------------------------------------------------------
+        // 2. Periodic Worker for Kp Alerts
+        //
+        // This runs every 15 minutes — WorkManager’s minimum interval.
+        // ---------------------------------------------------------------------
 
-        // --- OPTIONAL: Testing worker (one-time, 1 minute delay) ---
-        // Uncomment this to test alerts quickly
+        val workRequest =
+            PeriodicWorkRequestBuilder<KpAlertWorker>(15, TimeUnit.MINUTES)
+                .build()
 
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "kpAlertWork",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            workRequest
+        )
+
+
+        // ---------------------------------------------------------------------
+        // 3. One-Time Worker — for testing only
+        //
+        // Runs once, after a 1-minute delay. Ideal for development
+        // when you want to verify background alerts without waiting.
+        // ---------------------------------------------------------------------
+        /*
         val kpTestWork =
             OneTimeWorkRequestBuilder<KpAlertWorker>()
                 .setInitialDelay(1, TimeUnit.MINUTES)
@@ -32,5 +58,6 @@ class CelestiaApplication : Application() {
 
         WorkManager.getInstance(this).enqueue(kpTestWork)
 
+         */
     }
 }
