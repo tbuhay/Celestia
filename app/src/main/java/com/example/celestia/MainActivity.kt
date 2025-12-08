@@ -30,37 +30,54 @@ import androidx.navigation.navArgument
 import com.example.celestia.ui.screens.ObservationEditorScreen
 
 /**
- * Main entry point for Celestia.
+ * **MainActivity — Host for the entire Celestia Compose application.**
  *
- * Responsibilities:
- * - Initializes Firebase
- * - Applies global theming (dark/light mode + text scaling)
- * - Sets up the navigation graph and destinations
- * - Routes users to Login or Home depending on authentication state
- * - Handles deep-link style navigation from notifications via
- *   `intent.getStringExtra("navigate_to")`
+ * This Activity is responsible for:
  *
- * This activity hosts all Compose UI screens.
+ * ### 🏁 App Initialization
+ * - Initializing Firebase (Auth + additional Firebase services if added later)
+ * - Preparing edge-to-edge layout for modern UI design
+ * - Applying global theming (dark mode + font scaling)
+ *
+ * ### 🧭 Navigation Graph
+ * - Defines all top-level screens in the app
+ * - Determines start destination based on authentication state
+ * - Handles navigation triggered by system notifications
+ *
+ * ### 📱 UI Hosting
+ * This activity contains **no UI of its own**.
+ * Instead, it sets a Jetpack Compose `NavHost` that renders the entire application.
+ *
+ * ### 🔔 Notification Routing
+ * If Celestia is opened via a system notification (e.g., “Kp Alert”), a route
+ * is passed through the launch intent using:
+ *
+ * ```
+ * intent.getStringExtra("navigate_to")
+ * ```
+ *
+ * MainActivity intercepts this and immediately navigates to the correct screen,
+ * even if the app was previously closed.
  */
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // If launched from a notification, the target route is included here.
+        // Deep-link destination triggered from notifications (optional)
         val navigateTo = intent.getStringExtra("navigate_to")
 
-        // Required once for Firebase Auth + any other Firebase services.
+        // Initialize Firebase services (Auth required for Login/Register screens)
         FirebaseApp.initializeApp(this)
 
-        // Use full edge-to-edge layout for immersive UI.
+        // Prepare edge-to-edge layout for immersive UI
         enableEdgeToEdge()
 
         setContent {
 
-            // ---------------------------------------------------------
-            // THEME + ACCESSIBILITY (text scaling)
-            // ---------------------------------------------------------
+            // -----------------------------------------------------------------
+            // THEME + ACCESSIBILITY CONFIGURATION
+            // -----------------------------------------------------------------
             val settingsVM: SettingsViewModel = viewModel()
             val darkModeEnabled = settingsVM.darkModeEnabled.observeAsState(initial = true).value
             val textSize = settingsVM.textSize.observeAsState(initial = 1).value
@@ -70,22 +87,19 @@ class MainActivity : ComponentActivity() {
                 textSize = textSize
             ) {
 
-                // ---------------------------------------------------------
-                // NAVIGATION SETUP
-                // ---------------------------------------------------------
+                // -----------------------------------------------------------------
+                // NAVIGATION CONTROLLER + VIEWMODELS
+                // -----------------------------------------------------------------
                 val navController = rememberNavController()
                 val celestiaVM: CelestiaViewModel = viewModel()
 
-                // Determine start screen based on whether user is signed in.
+                // Determine start destination based on auth state
                 val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
                 val startDestination = if (firebaseUser != null) "home" else "login"
 
-                // ---------------------------------------------------------
-                // NOTIFICATION NAVIGATION HANDLER
-                //
-                // If a user taps a system notification (e.g., "Kp Alert"),
-                // Celestia opens directly to the correct screen.
-                // ---------------------------------------------------------
+                // -----------------------------------------------------------------
+                // NAVIGATION FROM NOTIFICATION TAP
+                // -----------------------------------------------------------------
                 if (navigateTo != null) {
                     LaunchedEffect(Unit) {
                         navController.navigate(navigateTo) {
@@ -94,35 +108,39 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // ---------------------------------------------------------
-                // NAVIGATION GRAPH
-                // ---------------------------------------------------------
+                // -----------------------------------------------------------------
+                // NAVIGATION GRAPH — DEFINES EVERY SCREEN IN CELESTIA
+                // -----------------------------------------------------------------
                 NavHost(
                     navController = navController,
                     startDestination = startDestination
                 ) {
-                    // Authentication
+                    // --- Authentication ---
                     composable("login") { LoginScreen(navController) }
                     composable("register") { RegisterScreen(navController) }
 
-                    // Dashboard & Screens
+                    // --- Dashboard + Feature Screens ---
                     composable("home") { HomeScreen(navController, celestiaVM) }
                     composable("kp_index") { KpIndexScreen(navController, celestiaVM) }
                     composable("iss_location") { IssLocationScreen(navController, celestiaVM) }
                     composable("asteroid_tracking") { AsteroidTrackingScreen(navController) }
                     composable("lunar_phase") { LunarPhaseScreen(navController) }
 
-                    // Settings
+                    // --- Settings & Preferences ---
                     composable("settings") { SettingsScreen(navController) }
-                    composable("notification_preferences") { NotificationPreferencesScreen(navController)
+                    composable("notification_preferences") {
+                        NotificationPreferencesScreen(navController)
                     }
                     composable("account") { AccountScreen(navController) }
+
+                    // --- Observation Journal ---
                     composable("observation_history") {
                         ObservationHistoryScreen(
                             navController = navController,
                             vm = celestiaVM
                         )
                     }
+
                     composable("observation_new") {
                         ObservationEditorScreen(
                             navController = navController,
@@ -131,7 +149,6 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // Observation detail/edit
                     composable(
                         route = "observation_detail/{id}",
                         arguments = listOf(

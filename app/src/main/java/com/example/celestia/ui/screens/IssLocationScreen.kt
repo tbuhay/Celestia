@@ -36,18 +36,24 @@ import com.google.maps.android.compose.*
 import kotlinx.coroutines.delay
 
 /**
- * Screen displaying real-time ISS positional data along with a
- * fully animated Google Maps view tracking the ISS as it moves.
+ * **Real-time ISS Tracking Screen**
  *
- * Features:
- * - Live ISS latitude, longitude, altitude, velocity
- * - Auto-refresh every 2 seconds
- * - Smooth camera interpolation following the ISS unless the user interacts
+ * Displays live positional and orbital data for the International Space Station,
+ * paired with a highly animated Google Maps view that smoothly interpolates the ISS
+ * movement in low Earth orbit.
+ *
+ * Key Features:
+ * - Live ISS latitude, longitude, altitude, and velocity
+ * - Auto-refresh every **2 seconds** for near real-time accuracy
+ * - Smooth camera interpolation that follows the ISS unless the user interacts
  * - Current astronaut count aboard the ISS
- * - About section explaining the ISS
+ * - Informational “About the ISS” section
  *
- * @param navController Navigation controller for returning back to Home.
- * @param vm Main CelestiaViewModel containing ISS data + astronaut count.
+ * This screen relies on reactive state updates from [CelestiaViewModel] and respects
+ * the user’s preferred time format via [SettingsViewModel].
+ *
+ * @param navController Navigation controller for returning to the previous screen.
+ * @param vm Main ViewModel providing ISS data and astronaut counts.
  */
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,11 +62,11 @@ fun IssLocationScreen(
     navController: NavController,
     vm: CelestiaViewModel
 ) {
-    // ISS data + astronaut count
+    // Live ISS data streams
     val issReading by vm.issReading.observeAsState()
     val astronautCount by vm.astronautCount.observeAsState(0)
 
-    // Settings for time format preferences
+    // Retrieve user’s time format preference (12h vs 24h)
     val settingsVM: SettingsViewModel = viewModel()
     val use24h = settingsVM.timeFormat24h.observeAsState(true).value
 
@@ -68,13 +74,13 @@ fun IssLocationScreen(
     val cardShape = RoundedCornerShape(14.dp)
 
     /**
-     * Load astronaut count immediately when entering screen.
+     * Fetch the current astronaut count immediately when the screen loads.
      */
     LaunchedEffect(Unit) { vm.fetchAstronauts() }
 
     /**
      * Continuously refresh ISS + astronaut data every 2 seconds.
-     * This ensures the map always reflects real-time movement.
+     * This loop runs for the life of the screen.
      */
     LaunchedEffect(Unit) {
         while (true) {
@@ -94,7 +100,8 @@ fun IssLocationScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background)
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { padding ->
@@ -124,12 +131,12 @@ fun IssLocationScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
 
-                    // HEADER SECTION
+                    // Header (badge + titles)
                     HeaderSection()
 
                     HorizontalDivider()
 
-                    // LIVE ISS DATA SECTION
+                    // Live ISS data
                     issReading?.let { reading ->
 
                         StatRow(
@@ -186,17 +193,17 @@ fun IssLocationScreen(
                 if (issPos != null) {
 
                     /**
-                     * `isUserInteracting` prevents the map camera from being
-                     * auto-controlled while the user manually pans/zooms.
+                     * Tracks whether the user is actively interacting with the map.
+                     * When true, automatic camera tracking is temporarily disabled.
                      */
                     var isUserInteracting by remember { mutableStateOf(false) }
 
-                    // Interpolation points for smooth animation
+                    // Interpolation values for smooth animation
                     var previousPos by remember { mutableStateOf(issPos) }
                     var targetPos by remember { mutableStateOf(issPos) }
                     var progress by remember { mutableFloatStateOf(1f) }
 
-                    // Map camera controller
+                    // Google Maps camera controller
                     val cameraState = rememberCameraPositionState {
                         position = CameraPosition.fromLatLngZoom(issPos, 4.5f)
                     }
@@ -211,7 +218,7 @@ fun IssLocationScreen(
                             onMapLoaded = { mapLoaded = true }
                         )
 
-                        // STATIC CENTER MARKER
+                        // Center marker representing ISS location
                         Icon(
                             Icons.Default.LocationOn,
                             contentDescription = "ISS Marker",
@@ -221,14 +228,14 @@ fun IssLocationScreen(
                                 .align(Alignment.Center)
                         )
 
-                        // Detect user interactions with the map
+                        // Detect when the user moves/zooms the map
                         LaunchedEffect(cameraState.isMoving) {
                             isUserInteracting = cameraState.isMoving
                         }
                     }
 
                     /**
-                     * Update animation targets whenever ISS position changes.
+                     * Update animation target whenever the ISS position changes.
                      */
                     LaunchedEffect(issPos) {
                         if (mapLoaded) {
@@ -239,8 +246,8 @@ fun IssLocationScreen(
                     }
 
                     /**
-                     * Interpolate ISS movement and animate camera updates.
-                     * Runs at ~60FPS using delay(16).
+                     * Smooth camera interpolation loop — runs until the movement is complete
+                     * or the user interacts with the map.
                      */
                     LaunchedEffect(previousPos, targetPos, mapLoaded) {
                         if (!mapLoaded) return@LaunchedEffect
@@ -250,7 +257,7 @@ fun IssLocationScreen(
 
                         while (progress < 1f) {
 
-                            // Cancel animation if user touches the map
+                            // Cancel animation if user interacts
                             if (isUserInteracting) break
 
                             val elapsed = System.currentTimeMillis() - startTime
@@ -261,7 +268,9 @@ fun IssLocationScreen(
                                 previousPos.longitude + (targetPos.longitude - previousPos.longitude) * progress
                             )
 
-                            cameraState.position = CameraPosition.fromLatLngZoom(interpolated, cameraState.position.zoom)
+                            cameraState.position =
+                                CameraPosition.fromLatLngZoom(interpolated, cameraState.position.zoom)
+
                             cameraState.move(CameraUpdateFactory.newLatLng(interpolated))
 
                             delay(16)
@@ -310,9 +319,12 @@ fun IssLocationScreen(
 }
 
 /**
- * Header section for the ISS data card, containing:
- * - Circular icon badge
- * - ISS name and label
+ * Header section for the main ISS data card.
+ *
+ * Displays:
+ * - A circular gradient icon badge
+ * - Title (“International Space Station”)
+ * - Subtitle (“Live Position”)
  */
 @Composable
 private fun HeaderSection() {
@@ -351,12 +363,16 @@ private fun HeaderSection() {
 }
 
 /**
- * A simple labeled row used for displaying a single ISS data point,
- * such as altitude, velocity, coordinates, or crew count.
+ * A reusable labeled stat row used inside ISS data cards.
  *
- * @param icon Icon representing the data type.
- * @param label Label describing the value.
- * @param value Value or formatted reading.
+ * Displays:
+ * - A small icon
+ * - A label (“Altitude”, “Velocity”, etc.)
+ * - A formatted value
+ *
+ * @param icon Icon representing the metric type.
+ * @param label Short descriptor for the displayed value.
+ * @param value The formatted value to present.
  */
 @Composable
 private fun StatRow(

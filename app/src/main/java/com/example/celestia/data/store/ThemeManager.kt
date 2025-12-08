@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.celestia.data.db.CelestiaDatabase
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +36,14 @@ object ThemeKeys {
     val ISS_PROXIMITY_ENABLED = booleanPreferencesKey("iss_proximity_enabled")
     val LAST_ISS_DISTANCE = floatPreferencesKey("last_iss_distance")
     val LAST_ISS_PROX_ALERT = longPreferencesKey("last_iss_prox_alert")
+
+    // ---------------- HOME LOCATION ----------------
+    val HOME_CITY = stringPreferencesKey("home_city")
+    val HOME_REGION = stringPreferencesKey("home_region")
+    val HOME_COUNTRY = stringPreferencesKey("home_country")
+
+    val HOME_LAT = floatPreferencesKey("home_lat")
+    val HOME_LON = floatPreferencesKey("home_lon")
 }
 
 /**
@@ -225,5 +234,69 @@ class ThemeManager(private val context: Context) {
         dao.clearLunarPhase()
 
         Log.d("ThemeManager", "Cache cleared.")
+    }
+
+    // -------------------------------------------------------------------------
+    // HOME LOCATION (City, Region, Country, Coordinates)
+    // -------------------------------------------------------------------------
+
+    val homeCityFlow: Flow<String> =
+        context.themeDataStore.data.map { prefs ->
+            prefs[ThemeKeys.HOME_CITY] ?: ""
+        }
+
+    val homeRegionFlow: Flow<String> =
+        context.themeDataStore.data.map { prefs ->
+            prefs[ThemeKeys.HOME_REGION] ?: ""
+        }
+
+    val homeCountryFlow: Flow<String> =
+        context.themeDataStore.data.map { prefs ->
+            prefs[ThemeKeys.HOME_COUNTRY] ?: ""
+        }
+
+    val homeLatFlow: Flow<Float> =
+        context.themeDataStore.data.map { prefs ->
+            prefs[ThemeKeys.HOME_LAT] ?: 0f
+        }
+
+    val homeLonFlow: Flow<Float> =
+        context.themeDataStore.data.map { prefs ->
+            prefs[ThemeKeys.HOME_LON] ?: 0f
+        }
+
+    suspend fun setHomeCity(city: String) {
+        context.themeDataStore.edit { prefs ->
+            prefs[ThemeKeys.HOME_CITY] = city
+        }
+    }
+
+    suspend fun setHomeRegion(region: String) {
+        context.themeDataStore.edit { prefs ->
+            prefs[ThemeKeys.HOME_REGION] = region
+        }
+    }
+
+    suspend fun setHomeCountry(country: String) {
+        context.themeDataStore.edit { prefs ->
+            prefs[ThemeKeys.HOME_COUNTRY] = country
+        }
+    }
+
+    suspend fun setHomeCoordinates(lat: Double, lon: Double) {
+        context.themeDataStore.edit { prefs ->
+            prefs[ThemeKeys.HOME_LAT] = lat.toFloat()
+            prefs[ThemeKeys.HOME_LON] = lon.toFloat()
+        }
+    }
+
+    suspend fun clearHomeLocation() {
+        context.themeDataStore.edit { prefs ->
+            prefs.remove(ThemeKeys.HOME_CITY)
+            prefs.remove(ThemeKeys.HOME_REGION)
+            prefs.remove(ThemeKeys.HOME_COUNTRY)
+            prefs.remove(ThemeKeys.HOME_LAT)
+            prefs.remove(ThemeKeys.HOME_LON)
+        }
     }
 }

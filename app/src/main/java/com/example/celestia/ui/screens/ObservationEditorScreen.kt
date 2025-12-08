@@ -1,7 +1,6 @@
 package com.example.celestia.ui.screens
 
 import android.content.Intent
-import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -27,22 +26,45 @@ import com.example.celestia.data.model.ObservationEntry
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.ui.text.input.KeyboardType
 import android.net.Uri
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.celestia.ui.viewmodel.SettingsViewModel
 import com.example.celestia.utils.FormatUtils
-import java.util.Locale
 
+// -----------------------------------------------------------------------------
+// OBSERVATION HISTORY SCREEN (LIST OF ENTRIES)
+// -----------------------------------------------------------------------------
+
+/**
+ * **Observation History Screen**
+ *
+ * Displays a scrollable chronological list of all user-created observation journal
+ * entries, showing:
+ * - Entry title and timestamp
+ * - Saved location
+ * - Weather and sky metrics (Kp Index, weather summary)
+ * - Optional thumbnail photo
+ *
+ * Features:
+ * - Clicking an entry opens its detail view (`observation_detail/{id}`)
+ * - Top bar includes an action button to create a new entry
+ * - Automatically formats timestamps according to the user's 12h/24h preference
+ *
+ * @param navController Navigation controller for moving to entry details or new entry.
+ * @param vm The main CelestiaViewModel used to fetch journal entries.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ObservationHistoryScreen(
@@ -58,25 +80,16 @@ fun ObservationHistoryScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "Observation Journal",
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    Text("Observation Journal", style = MaterialTheme.typography.titleLarge)
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     IconButton(onClick = { navController.navigate("observation_new") }) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "New Observation"
-                        )
+                        Icon(Icons.Default.Add, contentDescription = "New Observation")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -85,6 +98,7 @@ fun ObservationHistoryScreen(
             )
         }
     ) { padding ->
+
         if (entries.isEmpty()) {
             EmptyHistoryContent(padding)
         } else {
@@ -109,6 +123,11 @@ fun ObservationHistoryScreen(
     }
 }
 
+/**
+ * Displays a centered message when the user has no observation entries.
+ *
+ * @param padding Outer padding passed from the Scaffold content.
+ */
 @Composable
 private fun EmptyHistoryContent(padding: PaddingValues) {
     Column(
@@ -131,6 +150,20 @@ private fun EmptyHistoryContent(padding: PaddingValues) {
     }
 }
 
+/**
+ * Represents a single journal entry in the Observation History list.
+ *
+ * Shows:
+ * - Title (or timestamp if untitled)
+ * - Location name
+ * - Weather + Kp Index summary
+ * - Optional notes preview
+ * - Optional thumbnail photo
+ *
+ * @param entry The journal entry model.
+ * @param use24h Whether timestamps should be formatted using 24-hour format.
+ * @param onClick Lambda triggered when the card is tapped.
+ */
 @Composable
 private fun ObservationHistoryItem(
     entry: ObservationEntry,
@@ -138,80 +171,60 @@ private fun ObservationHistoryItem(
     onClick: () -> Unit
 ) {
     ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // PHOTO THUMBNAIL (if photo exists)
+
+            // Optional thumbnail photo
             if (entry.photoUrl != null) {
                 AsyncImage(
                     model = entry.photoUrl,
                     contentDescription = "Observation photo",
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(10.dp)),
+                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(10.dp)),
                     contentScale = ContentScale.Crop
                 )
             }
 
             Column(Modifier.weight(1f)) {
 
-                // Title + timestamp line
-                val tsText = formatTimestamp(entry.timestamp, use24h)
+                val tsText = FormatUtils.formatUpdatedTimestamp(entry.timestamp.toString(), use24h)
 
-                if (entry.observationTitle.isNotBlank()) {
-                    Text(
-                        text = "${entry.observationTitle} • $tsText",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                } else {
-                    Text(
-                        text = tsText,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    )
-                }
-
-                // Location name
                 Text(
-                    text = entry.locationName ?: "Unknown location",
+                    text = if (entry.observationTitle.isNotBlank())
+                        "${entry.observationTitle} • $tsText"
+                    else tsText,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    entry.locationName ?: "Unknown location",
                     style = MaterialTheme.typography.bodyMedium
                 )
 
                 Spacer(Modifier.height(4.dp))
 
-                // Quick stats (Kp + weather)
                 val kpText = entry.kpIndex?.let { "Kp ${"%.1f".format(it)}" }
                 val weatherText = entry.weatherSummary
 
                 Text(
-                    text = listOfNotNull(kpText, weatherText)
+                    listOfNotNull(kpText, weatherText)
                         .joinToString(" • ")
                         .ifBlank { "No sky data captured" },
                     style = MaterialTheme.typography.bodySmall
                 )
 
-                // Notes preview
                 if (entry.notes.isNotBlank()) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = entry.notes,
+                        entry.notes,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall
@@ -222,11 +235,30 @@ private fun ObservationHistoryItem(
     }
 }
 
+// -----------------------------------------------------------------------------
+// OBSERVATION EDITOR (NEW / EDIT ENTRY)
+// -----------------------------------------------------------------------------
 
-private fun formatTimestamp(timestamp: Long, use24h: Boolean): String {
-    return FormatUtils.formatUpdatedTimestamp(timestamp.toString(), use24h)
-}
-
+/**
+ * **Observation Editor Screen**
+ *
+ * Allows the user to create a new observation journal entry or edit an existing one.
+ * The editor supports:
+ *
+ * - Title, notes, and location entry
+ * - Auto-filled environmental data (Kp Index, weather, device/home coordinates)
+ * - Optional photo attachment with thumbnail and full-screen preview
+ * - ISS positional data (optional)
+ *
+ * Behavior:
+ * - If `entryId` is null → creates a new entry
+ * - If `entryId` is provided → loads existing entry into the form
+ * - When auto-fill is enabled, the ViewModel injects real-time sky data
+ *
+ * @param navController Navigation controller for returning after save.
+ * @param vm The main CelestiaViewModel providing journal data + auto-fill fields.
+ * @param entryId ID of the entry being edited (or `null` for new).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ObservationEditorScreen(
@@ -234,42 +266,33 @@ fun ObservationEditorScreen(
     vm: CelestiaViewModel = viewModel(),
     entryId: Int?
 ) {
-    // ---------------------------------------------------------
-    // STATE: loading existing entry (for edit mode)
-    // ---------------------------------------------------------
+    val context = LocalContext.current
+
+    // User preferences
+    val settingsVM: SettingsViewModel = viewModel()
+    val useDeviceLocation by settingsVM.deviceLocationEnabled.observeAsState(false)
+    val use24h by settingsVM.timeFormat24h.observeAsState(true)
+
+    // Auto-filled values
+    val autoFields by vm.autoObservationFields.observeAsState()
+
+    // Editing existing entry?
     var isLoading by remember { mutableStateOf(entryId != null) }
     var existingEntry by remember { mutableStateOf<ObservationEntry?>(null) }
 
-    // Settings (12h/24h)
-    val settingsVM: SettingsViewModel = viewModel()
-    val use24h by settingsVM.timeFormat24h.observeAsState(true)
-
-    // Use existing timestamp or new timestamp for creation
-    val baseTimestamp = remember(existingEntry, entryId) {
-        existingEntry?.timestamp ?: System.currentTimeMillis()
-    }
-
-    val formattedDate = remember(baseTimestamp, use24h) {
-        FormatUtils.formatUpdatedTimestamp(baseTimestamp.toString(), use24h)
-    }
-
-    val autoFields by vm.autoObservationFields.observeAsState()
-
-    val titleFocusRequester = remember { FocusRequester() }
-    val notesFocusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(entryId) {
-        if (entryId != null) {
-            // Editing existing entry
-            existingEntry = vm.getJournalEntry(entryId)
-        } else {
-            // New entry — kick off auto-fill
+    // ----------------------------------------
+    // INITIAL LOAD → load entry or auto-fill
+    // ----------------------------------------
+    LaunchedEffect(entryId, useDeviceLocation) {
+        if (entryId == null) {
             vm.refreshAutoObservationFieldsForNewEntry()
+        } else {
+            existingEntry = vm.getJournalEntry(entryId)
         }
         isLoading = false
     }
 
-    // While loading existing entry
+    // Show loading spinner
     if (isLoading) {
         Scaffold(
             topBar = {
@@ -277,19 +300,14 @@ fun ObservationEditorScreen(
                     title = { Text("Observation") },
                     navigationIcon = {
                         IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
-                            )
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
                 )
             }
         ) { padding ->
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -298,33 +316,25 @@ fun ObservationEditorScreen(
         return
     }
 
-    // ---------------------------------------------------------
-    // MODE: is this a new or existing entry?
-    // ---------------------------------------------------------
-    val isEditing = existingEntry != null
-
-    // ---------------------------------------------------------
-    // FORM STATE (initialized from existing entry if editing)
-    // ---------------------------------------------------------
+    // ----------------------------------------
+    // FORM STATE
+    // ----------------------------------------
     val initial = existingEntry
+    val baseTimestamp = existingEntry?.timestamp ?: System.currentTimeMillis()
+    val formattedDate = remember(baseTimestamp, use24h) {
+        FormatUtils.formatUpdatedTimestamp(baseTimestamp.toString(), use24h)
+    }
+
     var observationTitle by remember(initial) { mutableStateOf(initial?.observationTitle ?: "") }
     var titleError by remember { mutableStateOf<String?>(null) }
 
     var locationName by remember(initial) { mutableStateOf(initial?.locationName ?: "") }
-    var latitudeText by remember(initial) {
-        mutableStateOf(FormatUtils.formatLatitudePlain(initial?.latitude))
-    }
-    var longitudeText by remember(initial) {
-        mutableStateOf(FormatUtils.formatLongitudePlain(initial?.longitude))
-    }
+    var latitudeText by remember(initial) { mutableStateOf(FormatUtils.formatLatitudePlain(initial?.latitude)) }
+    var longitudeText by remember(initial) { mutableStateOf(FormatUtils.formatLongitudePlain(initial?.longitude)) }
 
     var kpText by remember(initial) { mutableStateOf(initial?.kpIndex?.toString() ?: "") }
-    var issLatText by remember(initial) {
-        mutableStateOf(FormatUtils.formatLatitudePlain(initial?.issLat))
-    }
-    var issLonText by remember(initial) {
-        mutableStateOf(FormatUtils.formatLongitudePlain(initial?.issLon))
-    }
+    var issLatText by remember(initial) { mutableStateOf(FormatUtils.formatLatitudePlain(initial?.issLat)) }
+    var issLonText by remember(initial) { mutableStateOf(FormatUtils.formatLongitudePlain(initial?.issLon)) }
 
     var weatherSummary by remember(initial) { mutableStateOf(initial?.weatherSummary ?: "") }
     var temperatureText by remember(initial) { mutableStateOf(initial?.temperatureC?.toString() ?: "") }
@@ -335,180 +345,188 @@ fun ObservationEditorScreen(
 
     var photoUrl by remember(initial) { mutableStateOf(initial?.photoUrl ?: "") }
 
-    // Photo picker for gallery image (URI → string)
-    val context = LocalContext.current
-
+    // ----------------------------------------
+    // PHOTO PICKER
+    // ----------------------------------------
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        if (uri != null) {
+        uri?.let {
             try {
                 context.contentResolver.takePersistableUriPermission(
-                    uri,
+                    it,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-            } catch (_: Exception) {
-                // Already granted, or storage provider doesn't support persistable perms
-            }
-
-            photoUrl = uri.toString()
+            } catch (_: Exception) {}
+            photoUrl = it.toString()
         }
     }
 
-    // Delete dialog state
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
+    // ----------------------------------------
+    // APPLY AUTO-FILL VALUES ON NEW ENTRY
+    // ----------------------------------------
     LaunchedEffect(autoFields) {
-        if (!isEditing && autoFields != null) {
+        if (entryId == null && autoFields != null) {
             autoFields?.let { auto ->
 
-                if (latitudeText.isBlank() && auto.latitude != null) {
+                if (latitudeText.isBlank() && auto.latitude != null)
                     latitudeText = FormatUtils.formatLatitudePlain(auto.latitude)
-                }
-                if (longitudeText.isBlank() && auto.longitude != null) {
+
+                if (longitudeText.isBlank() && auto.longitude != null)
                     longitudeText = FormatUtils.formatLongitudePlain(auto.longitude)
-                }
-                if (kpText.isBlank() && auto.kpIndex != null) {
+
+                if (kpText.isBlank() && auto.kpIndex != null)
                     kpText = auto.kpIndex.toString()
-                }
-                if (issLatText.isBlank() && auto.issLat != null) {
+
+                if (issLatText.isBlank() && auto.issLat != null)
                     issLatText = FormatUtils.formatLatitudePlain(auto.issLat)
-                }
-                if (issLonText.isBlank() && auto.issLon != null) {
+
+                if (issLonText.isBlank() && auto.issLon != null)
                     issLonText = FormatUtils.formatLongitudePlain(auto.issLon)
-                }
-                if (temperatureText.isBlank() && auto.temperatureC != null) {
+
+                if (temperatureText.isBlank() && auto.temperatureC != null)
                     temperatureText = auto.temperatureC.toString()
-                }
-                if (cloudCoverText.isBlank() && auto.cloudCoverPercent != null) {
+
+                if (cloudCoverText.isBlank() && auto.cloudCoverPercent != null)
                     cloudCoverText = auto.cloudCoverPercent.toString()
-                }
-                if (weatherSummary.isBlank() && auto.weatherSummary != null) {
+
+                if (weatherSummary.isBlank() && auto.weatherSummary != null)
                     weatherSummary = auto.weatherSummary
-                }
+
+                if (locationName.isBlank() && auto.locationName != null)
+                    locationName = auto.locationName
             }
         }
     }
 
-    // ---------------------------------------------------------
-    // SAVE HANDLER
-    // ---------------------------------------------------------
+    // ----------------------------------------
+    // SAVE LOGIC
+    // ----------------------------------------
+    val titleFocus = remember { FocusRequester() }
+    val notesFocus = remember { FocusRequester() }
+
     fun handleSave() {
-        // Title required
         if (observationTitle.isBlank()) {
             titleError = "Title cannot be empty"
-            // focus on title field
-            titleFocusRequester.requestFocus()
+            titleFocus.requestFocus()
             return
         }
 
-        // Notes required
         if (notes.isBlank()) {
             notesError = "Notes cannot be empty"
-            // focus on notes field
-            notesFocusRequester.requestFocus()
+            notesFocus.requestFocus()
             return
         }
 
-        val latitude = latitudeText.toDoubleOrNull()
-        val longitude = longitudeText.toDoubleOrNull()
-        val kpIndex = kpText.toDoubleOrNull()
+        val lat = latitudeText.toDoubleOrNull()
+        val lon = longitudeText.toDoubleOrNull()
+        val kp = kpText.toDoubleOrNull()
         val issLat = issLatText.toDoubleOrNull()
         val issLon = issLonText.toDoubleOrNull()
-        val tempC = temperatureText.toDoubleOrNull()
-        val cloudCover = cloudCoverText.toIntOrNull()
+        val temp = temperatureText.toDoubleOrNull()
+        val cloud = cloudCoverText.toIntOrNull()
 
-        val cleanedLocation = locationName.trim().ifEmpty { null }
-        val cleanedWeather = weatherSummary.trim().ifEmpty { null }
-        val cleanedPhoto = photoUrl.takeIf { it.isNotBlank() }
-
-        val normalizedLatitude = latitude?.let { String.format(Locale.US, "%.4f", it).toDouble() }
-        val normalizedLongitude = longitude?.let { String.format(Locale.US, "%.4f", it).toDouble() }
-        val normalizedIssLat = issLat?.let { String.format(Locale.US, "%.4f", it).toDouble() }
-        val normalizedIssLon = issLon?.let { String.format(Locale.US, "%.4f", it).toDouble() }
-
-        val entryToSave: ObservationEntry =
-            if (existingEntry != null) {
-                existingEntry!!.copy(
-                    observationTitle = observationTitle.trim(),
-                    locationName = cleanedLocation,
-                    latitude = normalizedLatitude,
-                    longitude = normalizedLongitude,
-                    kpIndex = kpIndex,
-                    issLat = normalizedIssLat,
-                    issLon = normalizedIssLon,
-                    weatherSummary = cleanedWeather,
-                    temperatureC = tempC,
-                    cloudCoverPercent = cloudCover,
-                    notes = notes.trim(),
-                    photoUrl = cleanedPhoto
-                )
-            } else {
-                ObservationEntry(
+        val entry =
+            existingEntry?.copy(
+                observationTitle = observationTitle.trim(),
+                locationName = locationName.trim().ifBlank { null },
+                latitude = lat,
+                longitude = lon,
+                kpIndex = kp,
+                issLat = issLat,
+                issLon = issLon,
+                weatherSummary = weatherSummary.trim().ifBlank { null },
+                temperatureC = temp,
+                cloudCoverPercent = cloud,
+                notes = notes.trim(),
+                photoUrl = photoUrl.takeIf { it.isNotBlank() }
+            )
+                ?: ObservationEntry(
                     id = 0,
                     timestamp = baseTimestamp,
                     observationTitle = observationTitle.trim(),
-                    locationName = cleanedLocation,
-                    latitude = normalizedLatitude,
-                    longitude = normalizedLongitude,
-                    kpIndex = kpIndex,
-                    issLat = normalizedIssLat,
-                    issLon = normalizedIssLon,
-                    weatherSummary = cleanedWeather,
-                    temperatureC = tempC,
-                    cloudCoverPercent = cloudCover,
+                    locationName = locationName.trim().ifBlank { null },
+                    latitude = lat,
+                    longitude = lon,
+                    kpIndex = kp,
+                    issLat = issLat,
+                    issLon = issLon,
+                    weatherSummary = weatherSummary.trim().ifBlank { null },
+                    temperatureC = temp,
+                    cloudCoverPercent = cloud,
                     notes = notes.trim(),
-                    photoUrl = cleanedPhoto
+                    photoUrl = photoUrl.takeIf { it.isNotBlank() }
                 )
-            }
 
-
-        vm.saveJournalEntry(entryToSave)
+        vm.saveJournalEntry(entry)
         navController.popBackStack()
     }
 
-    // ---------------------------------------------------------
-    // UI
-    // ---------------------------------------------------------
+    // ----------------------------------------
+    // SCREEN UI
+    // ----------------------------------------
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        if (isEditing) "Edit Observation" else "New Observation",
+                        if (existingEntry != null) "Edit Observation" else "New Observation",
                         style = MaterialTheme.typography.titleLarge
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { handleSave() }) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Save"
-                        )
-                    }
+                    // --------------------------------------------
+                    // DELETE BUTTON (only when editing an entry)
+                    // --------------------------------------------
+                    if (existingEntry != null) {
+                        var showDeleteDialog by remember { mutableStateOf(false) }
 
-                    if (isEditing && existingEntry != null) {
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete observation"
+                                Icons.Default.Delete,
+                                contentDescription = "Delete Entry",
+                                tint = MaterialTheme.colorScheme.error
                             )
                         }
+
+                        if (showDeleteDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showDeleteDialog = false },
+                                title = { Text("Delete Entry?") },
+                                text = { Text("Are you sure you want to delete this observation? This cannot be undone.") },
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            existingEntry?.let { vm.deleteJournalEntry(it) }
+                                            showDeleteDialog = false
+                                            navController.popBackStack()
+                                        }
+                                    ) {
+                                        Text("Delete")
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showDeleteDialog = false }) {
+                                        Text("Cancel")
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    IconButton(onClick = { handleSave() }) {
+                        Icon(Icons.Default.Check, contentDescription = "Save")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
-        },
+        }
     ) { padding ->
 
         Column(
@@ -519,7 +537,10 @@ fun ObservationEditorScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // TITLE
+
+            // ----------------------------
+            // Title field
+            // ----------------------------
             OutlinedTextField(
                 value = observationTitle,
                 onValueChange = {
@@ -528,78 +549,40 @@ fun ObservationEditorScreen(
                 },
                 label = { Text("Title") },
                 isError = titleError != null,
-                supportingText = {
-                    titleError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(titleFocusRequester)
+                supportingText = { titleError?.let { Text(it, color = MaterialTheme.colorScheme.error) } },
+                modifier = Modifier.fillMaxWidth().focusRequester(titleFocus),
+                singleLine = true
             )
 
-            Spacer(Modifier.height(8.dp))
+            Text("Observation time and location", style = MaterialTheme.typography.titleMedium)
+            Text(formattedDate, style = MaterialTheme.typography.bodyMedium)
 
-
-            // Timestamp display
-            Text(
-                text = "Observation time",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = formattedDate,
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Divider(Modifier.padding(vertical = 8.dp))
-
-            // LOCATION
+            // ----------------------------
+            // Location
+            // ----------------------------
             OutlinedTextField(
                 value = locationName,
                 onValueChange = { locationName = it },
                 label = { Text("Location") },
                 placeholder = { Text("City, Province/State, Country") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = latitudeText,
-                    onValueChange = { latitudeText = it },
-                    label = { Text("Latitude") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = longitudeText,
-                    onValueChange = { longitudeText = it },
-                    label = { Text("Longitude") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            Divider()
 
-            Divider(Modifier.padding(vertical = 8.dp))
-
-            // SKY CONDITIONS
-            Text(
-                text = "Sky conditions",
-                style = MaterialTheme.typography.titleMedium
-            )
+            // ----------------------------
+            // Sky conditions
+            // ----------------------------
+            Text("Sky conditions", style = MaterialTheme.typography.titleMedium)
 
             OutlinedTextField(
                 value = kpText,
                 onValueChange = { kpText = it },
                 label = { Text("Kp Index") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
 
             OutlinedTextField(
@@ -610,61 +593,56 @@ fun ObservationEditorScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = temperatureText,
                     onValueChange = { temperatureText = it },
                     label = { Text("Temperature °C") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
                 )
                 OutlinedTextField(
                     value = cloudCoverText,
                     onValueChange = { cloudCoverText = it },
                     label = { Text("Cloud cover %") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
                 )
             }
 
-            Divider(Modifier.padding(vertical = 8.dp))
+            Divider()
 
-            // ISS COORDS
-            Text(
-                text = "ISS coordinates (optional)",
-                style = MaterialTheme.typography.titleMedium
-            )
+            // ----------------------------
+            // ISS optional coordinates
+            // ----------------------------
+            Text("ISS coordinates (optional)", style = MaterialTheme.typography.titleMedium)
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = issLatText,
                     onValueChange = { issLatText = it },
                     label = { Text("ISS Lat") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
                 )
                 OutlinedTextField(
                     value = issLonText,
                     onValueChange = { issLonText = it },
                     label = { Text("ISS Lon") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
                 )
             }
 
-            Divider(Modifier.padding(vertical = 8.dp))
+            Divider()
 
-            // NOTES (required)
+            // ----------------------------
+            // Notes field
+            // ----------------------------
             OutlinedTextField(
                 value = notes,
                 onValueChange = {
@@ -676,21 +654,21 @@ fun ObservationEditorScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 120.dp)
-                    .focusRequester(notesFocusRequester),
+                    .focusRequester(notesFocus),
                 maxLines = 6,
                 isError = notesError != null,
                 supportingText = {
-                    notesError?.let { msg ->
-                        Text(
-                            text = msg,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    notesError?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             )
 
-            // PHOTO PICKER
+            // ----------------------------
+            // PHOTO PICKER SECTION
+            // ----------------------------
+            var showFullImage by remember { mutableStateOf(false) }
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -713,94 +691,107 @@ fun ObservationEditorScreen(
                     )
 
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
-                            onClick = { photoPickerLauncher.launch("image/*") }
+
+                        // Thumbnail preview
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 12.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Photo,
-                                contentDescription = "Pick photo",
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
-                            Text("Choose Photo")
+                            if (photoUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = photoUrl,
+                                    contentDescription = "Photo thumbnail",
+                                    modifier = Modifier
+                                        .size(70.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable { showFullImage = true },
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = "No image",
+                                    modifier = Modifier
+                                        .size(50.dp)
+                                        .clip(RoundedCornerShape(12.dp)),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
 
-                        if (photoUrl.isNotBlank()) {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                        // Photo action buttons
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                            horizontalAlignment = Alignment.End
+                        ) {
+
+                            OutlinedButton(
+                                onClick = { photoPickerLauncher.launch("image/*") },
                             ) {
-                                TextButton(
-                                    onClick = { photoUrl = "" }
-                                ) {
-                                    Text("Remove Photo")
-                                }
+                                Icon(
+                                    imageVector = Icons.Default.Photo,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text("Choose Photo")
+                            }
+
+                            if (photoUrl.isNotBlank()) {
+                                Text(
+                                    text = "Remove Photo",
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier
+                                        .clickable { photoUrl = "" }
+                                        .padding(end = 22.dp),
+                                    style = MaterialTheme.typography.labelLarge
+                                )
                             }
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            // Full-screen image viewer
+            if (showFullImage && photoUrl.isNotBlank()) {
+                Dialog(onDismissRequest = { showFullImage = false }) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable { showFullImage = false }
+                    ) {
+                        AsyncImage(
+                            model = photoUrl,
+                            contentDescription = "Full screen photo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
 
-            // Bottom Save button (accessible)
-            Button(
-                onClick = { handleSave() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text("Save Observation")
+                        IconButton(
+                            onClick = { showFullImage = false },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close image",
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(Modifier.height(16.dp))
         }
     }
-
-    // ---------------------------------------------------------
-    // DELETE CONFIRMATION DIALOG
-    // ---------------------------------------------------------
-    if (showDeleteDialog && isEditing && existingEntry != null) {
-        DeleteObservationDialog(
-            onConfirm = {
-                vm.deleteJournalEntry(existingEntry!!)
-                showDeleteDialog = false
-                navController.popBackStack() // back to history
-            },
-            onDismiss = { showDeleteDialog = false }
-        )
-    }
-}
-
-@Composable
-fun DeleteObservationDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text("Delete observation?")
-        },
-        text = {
-            Text("This will permanently delete this observation from your journal.")
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    text = "Delete",
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
 }

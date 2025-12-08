@@ -13,146 +13,169 @@ import com.example.celestia.data.model.ObservationEntry
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Data Access Object (DAO) for Celestia's local Room database.
+ * **Data Access Object (DAO) for Celestia’s local Room database.**
  *
- * This interface provides all database operations for:
- * - Kp Index readings
- * - ISS location data
- * - Near-Earth object (asteroid) approach data
- * - Lunar phase information
+ * This interface defines all structured read/write operations for Celestia’s
+ * offline cache layer, including:
  *
- * All read queries return Flows so the UI can automatically react
- * to database updates without manual refresh calls.
+ * - **Kp Index readings** (NOAA)
+ * - **ISS position** and metadata
+ * - **NASA asteroid approach data**
+ * - **Lunar phase calculations**
+ * - **User-created Observation Journal entries**
+ *
+ * All retrieval methods return **Flow**, enabling real-time UI updates whenever
+ * the database changes—no polling or manual refresh needed.
+ *
+ * Insert operations default to `REPLACE`, ensuring the database always
+ * contains the most recent authoritative API results.
  */
 @Dao
 interface CelestiaDao {
 
     // -------------------------------------------------------------------------
-    // KP INDEX READINGS
+    // KP INDEX (NOAA) — kp_readings
     // -------------------------------------------------------------------------
 
     /**
-     * Inserts a list of Kp Index readings into the database.
-     * Existing records with matching IDs or timestamps are replaced.
+     * Inserts or replaces a full batch of Kp Index readings.
      *
-     * @param readings List of KpReading objects fetched from NOAA API.
+     * @param readings List of readings returned from the NOAA API.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(readings: List<KpReading>)
 
     /**
-     * Retrieves all stored Kp Index readings, ordered newest first.
+     * Returns all stored Kp readings ordered from newest → oldest.
      *
-     * @return A Flow emitting a list of KpReading objects.
+     * @return Flow that emits whenever readings are inserted or cleared.
      */
     @Query("SELECT * FROM kp_readings ORDER BY timestamp DESC")
     fun getAll(): Flow<List<KpReading>>
 
     /**
-     * Deletes all Kp Index readings from the table.
+     * Clears all Kp Index entries.
      */
     @Query("DELETE FROM kp_readings")
     suspend fun clearKpReadings()
 
     // -------------------------------------------------------------------------
-    // ISS LOCATION
+    // ISS LOCATION — iss_reading
     // -------------------------------------------------------------------------
 
     /**
      * Retrieves the most recent ISS reading.
      *
-     * @return A Flow emitting the latest IssReading or null if none exists.
+     * @return Flow emitting the latest [IssReading], or `null` if empty.
      */
     @Query("SELECT * FROM iss_reading LIMIT 1")
     fun getIssReading(): Flow<IssReading?>
 
     /**
-     * Inserts (or replaces) the latest ISS position data.
-     *
-     * @param reading The most recent ISS reading from the API.
+     * Saves the latest ISS reading (overwrites existing row).
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertIssReading(reading: IssReading)
 
     /**
-     * Clears the ISS reading table.
+     * Removes the stored ISS data.
      */
     @Query("DELETE FROM iss_reading")
     suspend fun clearIssReadings()
 
     // -------------------------------------------------------------------------
-    // ASTEROIDS (NEO APPROACHES)
+    // ASTEROID APPROACHES — asteroid_approaches
     // -------------------------------------------------------------------------
 
     /**
-     * Inserts or replaces a list of asteroid approach data.
+     * Inserts or replaces a list of asteroid close-approach objects.
      *
-     * @param asteroids List of AsteroidApproach objects returned from NASA API.
+     * @param asteroids Parsed list from NASA NEO feed.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAsteroids(asteroids: List<AsteroidApproach>)
 
     /**
-     * Deletes all asteroid approach records.
+     * Deletes all asteroid records.
      */
     @Query("DELETE FROM asteroid_approaches")
     suspend fun clearAsteroids()
 
     /**
-     * Retrieves all asteroid approaches sorted by closest upcoming date.
+     * Returns all stored asteroid approaches sorted by upcoming date.
      *
-     * @return A Flow emitting a list of AsteroidApproach.
+     * @return Flow emitting a chronologically ascending list.
      */
     @Query("SELECT * FROM asteroid_approaches ORDER BY approachDate ASC")
     fun getAllAsteroids(): Flow<List<AsteroidApproach>>
 
     /**
-     * Retrieves the next upcoming asteroid approach.
+     * Returns the **soonest upcoming asteroid** (used in dashboard previews).
      *
-     * @return A Flow emitting the closest future AsteroidApproach or null.
+     * @return Flow emitting one row, or `null` if table is empty.
      */
     @Query("SELECT * FROM asteroid_approaches ORDER BY approachDate ASC LIMIT 1")
     fun getNextAsteroid(): Flow<AsteroidApproach?>
 
     // -------------------------------------------------------------------------
-    // LUNAR PHASE
+    // LUNAR PHASE — lunar_phase
     // -------------------------------------------------------------------------
 
     /**
-     * Retrieves the most recently stored lunar phase.
+     * Retrieves the currently cached lunar phase dataset.
      *
-     * @return A Flow emitting a LunarPhaseEntity or null.
+     * @return Flow emitting the latest [LunarPhaseEntity] or null.
      */
     @Query("SELECT * FROM lunar_phase LIMIT 1")
     fun getLunarPhase(): Flow<LunarPhaseEntity?>
 
     /**
-     * Inserts or replaces the current lunar phase.
-     *
-     * @param entity A LunarPhaseEntity from the Astro API.
+     * Inserts or replaces the lunar phase row (table designed to hold 1 record).
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLunarPhase(entity: LunarPhaseEntity)
 
     /**
-     * Clears the lunar phase table.
+     * Clears the lunar_phase table.
      */
     @Query("DELETE FROM lunar_phase")
     suspend fun clearLunarPhase()
 
     // -------------------------------------------------------------------------
-    // OBSERVATION JOURNAL
+    // OBSERVATION JOURNAL — observation_entries
     // -------------------------------------------------------------------------
 
+    /**
+     * Inserts or replaces a single Observation Journal entry.
+     *
+     * Each entry receives a stable `id` from Room if inserted new, or replaces
+     * an existing entry when editing.
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertObservation(entry: ObservationEntry)
 
+    /**
+     * Returns all journal entries sorted newest → oldest.
+     *
+     * @return Flow emitting the full list of user-created observations.
+     */
     @Query("SELECT * FROM observation_entries ORDER BY timestamp DESC")
     fun getAllObservations(): Flow<List<ObservationEntry>>
 
+    /**
+     * Retrieves a single Observation Entry by its primary key.
+     *
+     * @param id The unique ID of the journal entry.
+     * @return The matching [ObservationEntry] or null.
+     */
     @Query("SELECT * FROM observation_entries WHERE id = :id")
     suspend fun getObservationById(id: Int): ObservationEntry?
 
+    /**
+     * Deletes a single Observation Entry.
+     *
+     * Uses Room's `@Delete` to match by primary key.
+     */
     @Delete
     suspend fun deleteObservation(entry: ObservationEntry)
 }
