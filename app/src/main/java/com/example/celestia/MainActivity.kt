@@ -1,19 +1,15 @@
 package com.example.celestia
 
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.example.celestia.ui.screens.AccountScreen
 import com.example.celestia.ui.screens.AsteroidTrackingScreen
 import com.example.celestia.ui.screens.LunarPhaseScreen
@@ -22,7 +18,6 @@ import com.example.celestia.ui.screens.IssLocationScreen
 import com.example.celestia.ui.screens.KpIndexScreen
 import com.example.celestia.ui.screens.LoginScreen
 import com.example.celestia.ui.screens.NotificationPreferencesScreen
-import com.example.celestia.ui.screens.ObservationEditorScreen
 import com.example.celestia.ui.screens.ObservationHistoryScreen
 import com.example.celestia.ui.screens.RegisterScreen
 import com.example.celestia.ui.screens.SettingsScreen
@@ -30,6 +25,9 @@ import com.example.celestia.ui.theme.CelestiaTheme
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.example.celestia.ui.viewmodel.SettingsViewModel
 import com.google.firebase.FirebaseApp
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.celestia.ui.screens.ObservationEditorScreen
 
 /**
  * Main entry point for Celestia.
@@ -46,7 +44,6 @@ import com.google.firebase.FirebaseApp
  */
 class MainActivity : ComponentActivity() {
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -117,14 +114,15 @@ class MainActivity : ComponentActivity() {
 
                     // Settings
                     composable("settings") { SettingsScreen(navController) }
-                    composable("notification_preferences") {
-                        NotificationPreferencesScreen(navController)
+                    composable("notification_preferences") { NotificationPreferencesScreen(navController)
                     }
                     composable("account") { AccountScreen(navController) }
                     composable("observation_history") {
-                        ObservationHistoryScreen(navController, celestiaVM)
+                        ObservationHistoryScreen(
+                            navController = navController,
+                            vm = celestiaVM
+                        )
                     }
-
                     composable("observation_new") {
                         ObservationEditorScreen(
                             navController = navController,
@@ -133,13 +131,14 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
+                    // Observation detail/edit
                     composable(
                         route = "observation_detail/{id}",
                         arguments = listOf(
                             navArgument("id") { type = NavType.IntType }
                         )
                     ) { backStackEntry ->
-                        val id = backStackEntry.arguments?.getInt("id")
+                        val id = backStackEntry.arguments?.getInt("id") ?: 0
                         ObservationEditorScreen(
                             navController = navController,
                             vm = celestiaVM,

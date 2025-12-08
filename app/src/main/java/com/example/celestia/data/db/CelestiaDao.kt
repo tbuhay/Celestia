@@ -1,6 +1,10 @@
 package com.example.celestia.data.db
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 import com.example.celestia.data.model.AsteroidApproach
 import com.example.celestia.data.model.IssReading
 import com.example.celestia.data.model.KpReading
@@ -137,17 +141,17 @@ interface CelestiaDao {
     suspend fun clearLunarPhase()
 
     // -------------------------------------------------------------------------
-// JOURNAL — Observation Entries
-// -------------------------------------------------------------------------
-
-    @Query("SELECT * FROM observation_entries ORDER BY timestamp DESC")
-    fun getAllObservations(): kotlinx.coroutines.flow.Flow<List<ObservationEntry>>
-
-    @Query("SELECT * FROM observation_entries WHERE id = :id LIMIT 1")
-    suspend fun getObservationById(id: Int): ObservationEntry?
+    // OBSERVATION JOURNAL
+    // -------------------------------------------------------------------------
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertObservation(entry: ObservationEntry)
+
+    @Query("SELECT * FROM observation_entries ORDER BY timestamp DESC")
+    fun getAllObservations(): Flow<List<ObservationEntry>>
+
+    @Query("SELECT * FROM observation_entries WHERE id = :id")
+    suspend fun getObservationById(id: Int): ObservationEntry?
 
     @Delete
     suspend fun deleteObservation(entry: ObservationEntry)

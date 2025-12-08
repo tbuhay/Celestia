@@ -11,7 +11,6 @@ import com.example.celestia.data.db.CelestiaDatabase
 import com.example.celestia.data.model.AsteroidApproach
 import com.example.celestia.data.model.KpHourlyGroup
 import com.example.celestia.data.model.KpReading
-import com.example.celestia.data.model.ObservationEntry
 import com.example.celestia.data.repository.CelestiaRepository
 import com.example.celestia.data.store.ThemeKeys
 import com.example.celestia.data.store.themeDataStore
@@ -27,6 +26,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.celestia.data.model.ObservationEntry
+import androidx.lifecycle.asLiveData
+import com.example.celestia.data.model.WeatherSnapshot
 
 /**
  * Primary ViewModel for Celestia.
@@ -454,8 +456,16 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
     }
 
     // -------------------------------------------------------------------------
-    // Observation Entries
+    // Journal Entries
     // -------------------------------------------------------------------------
+
+    val allJournalEntries: LiveData<List<ObservationEntry>> =
+        repo.getAllObservations().asLiveData()
+
+    suspend fun getJournalEntry(id: Int): ObservationEntry? {
+        return repo.getObservationById(id)
+    }
+
     fun saveJournalEntry(entry: ObservationEntry) {
         viewModelScope.launch {
             repo.saveObservation(entry)
@@ -468,13 +478,109 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    suspend fun getJournalEntry(id: Int): ObservationEntry? {
-        return repo.getObservationById(id)
-    }
+    // -------------------------------------------------------------------------
+    // Weather
+    // -------------------------------------------------------------------------
 
-    fun getLatestJournalEntry(entries: List<ObservationEntry>): ObservationEntry? {
-        return entries.maxByOrNull { it.timestamp }
-    }
+    data class AutoObservationFields(
+        val latitude: Double? = null,
+        val longitude: Double? = null,
+        val kpIndex: Double? = null,
+        val issLat: Double? = null,
+        val issLon: Double? = null,
+        val temperatureC: Double? = null,
+        val cloudCoverPercent: Int? = null,
+        val weatherSummary: String? = null
+    )
 
-    val allJournalEntries = repo.getAllObservations().asLiveData()
+    private val _autoObservationFields = MutableLiveData<AutoObservationFields?>(null)
+    val autoObservationFields: LiveData<AutoObservationFields?> = _autoObservationFields
+
+    /**
+     * Auto-populates sky/environment fields for a NEW observation entry:
+     * - Kp Index
+     * - ISS coordinates
+     * - Device latitude/longitude (or default)
+     * - Temperature, cloud cover, weather summary
+     *
+     * Results are pushed into [autoObservationFields].
+     */
+    fun refreshAutoObservationFieldsForNewEntry() {
+        viewModelScope.launch {
+            try {
+                // 1) Kp Index (from cached readings)
+                val kpList = readings.value.orEmpty()
+                val latestKp = getLatestValidKp(kpList)?.estimatedKp
+                Log.d("CelestiaVM.Auto", "Latest Kp Index = $latestKp")
+
+                // 2) ISS (perform a quick refresh)
+                val iss = try {
+                    repo.refreshIssLocation()
+                } catch (e: Exception) {
+                    Log.e("CelestiaVM.Auto", "ISS refresh failed", e)
+                    null
+                }
+
+                val issLat = iss?.latitude
+                val issLon = iss?.longitude
+                Log.d("CelestiaVM.Auto", "ISS lat/lon = $issLat, $issLon")
+
+                // 3) Location + weather (device or default)
+                getDeviceLocation(
+                    onResult = { lat, lon ->
+                        Log.d("CelestiaVM.Auto", "GPS SUCCESS → Using device coords: $lat, $lon")
+
+                        viewModelScope.launch {
+                            val weather = repo.fetchCurrentWeather(lat, lon)
+
+                            Log.d("CelestiaVM.Auto", "Weather from API (GPS coords): $weather")
+
+                            _autoObservationFields.postValue(
+                                AutoObservationFields(
+                                    latitude = lat,
+                                    longitude = lon,
+                                    kpIndex = latestKp,
+                                    issLat = issLat,
+                                    issLon = issLon,
+                                    temperatureC = weather?.temperatureC,
+                                    cloudCoverPercent = weather?.cloudCoverPercent,
+                                    weatherSummary = weather?.weatherSummary
+                                )
+                            )
+
+                            Log.d("CelestiaVM.Auto", "Auto-fill fields posted (GPS): ${_autoObservationFields.value}")
+                        }
+                    },
+                    onError = {
+                        Log.w("CelestiaVM.Auto", "GPS FAILED → Using DEFAULT Winnipeg coords")
+
+                        viewModelScope.launch {
+                            val weather = repo.fetchCurrentWeather(defaultLat, defaultLon)
+
+                            Log.d("CelestiaVM.Auto", "Weather from API (DEFAULT coords): $weather")
+
+                            _autoObservationFields.postValue(
+                                AutoObservationFields(
+                                    latitude = defaultLat,
+                                    longitude = defaultLon,
+                                    kpIndex = latestKp,
+                                    issLat = issLat,
+                                    issLon = issLon,
+                                    temperatureC = weather?.temperatureC,
+                                    cloudCoverPercent = weather?.cloudCoverPercent,
+                                    weatherSummary = weather?.weatherSummary
+                                )
+                            )
+
+                            Log.d("CelestiaVM.Auto", "Auto-fill fields posted (DEFAULT): ${_autoObservationFields.value}")
+                        }
+                    }
+                )
+
+            } catch (e: Exception) {
+                Log.e("CelestiaVM.Auto", "Error refreshing auto observation fields", e)
+                _autoObservationFields.postValue(null)
+            }
+        }
+    }
 }

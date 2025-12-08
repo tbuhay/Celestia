@@ -30,7 +30,7 @@ import com.example.celestia.data.model.ObservationEntry
         LunarPhaseEntity::class,
         ObservationEntry::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class CelestiaDatabase : RoomDatabase() {
