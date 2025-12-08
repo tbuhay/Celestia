@@ -1,5 +1,6 @@
 package com.example.celestia.ui.screens
 
+import android.content.Intent
 import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,7 +33,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import android.net.Uri
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.celestia.ui.viewmodel.SettingsViewModel
@@ -251,6 +255,9 @@ fun ObservationEditorScreen(
 
     val autoFields by vm.autoObservationFields.observeAsState()
 
+    val titleFocusRequester = remember { FocusRequester() }
+    val notesFocusRequester = remember { FocusRequester() }
+
     LaunchedEffect(entryId) {
         if (entryId != null) {
             // Editing existing entry
@@ -301,6 +308,7 @@ fun ObservationEditorScreen(
     // ---------------------------------------------------------
     val initial = existingEntry
     var observationTitle by remember(initial) { mutableStateOf(initial?.observationTitle ?: "") }
+    var titleError by remember { mutableStateOf<String?>(null) }
 
     var locationName by remember(initial) { mutableStateOf(initial?.locationName ?: "") }
     var latitudeText by remember(initial) {
@@ -328,10 +336,21 @@ fun ObservationEditorScreen(
     var photoUrl by remember(initial) { mutableStateOf(initial?.photoUrl ?: "") }
 
     // Photo picker for gallery image (URI → string)
+    val context = LocalContext.current
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                // Already granted, or storage provider doesn't support persistable perms
+            }
+
             photoUrl = uri.toString()
         }
     }
@@ -344,19 +363,19 @@ fun ObservationEditorScreen(
             autoFields?.let { auto ->
 
                 if (latitudeText.isBlank() && auto.latitude != null) {
-                    latitudeText = auto.latitude.toString()
+                    latitudeText = FormatUtils.formatLatitudePlain(auto.latitude)
                 }
                 if (longitudeText.isBlank() && auto.longitude != null) {
-                    longitudeText = auto.longitude.toString()
+                    longitudeText = FormatUtils.formatLongitudePlain(auto.longitude)
                 }
                 if (kpText.isBlank() && auto.kpIndex != null) {
                     kpText = auto.kpIndex.toString()
                 }
                 if (issLatText.isBlank() && auto.issLat != null) {
-                    issLatText = auto.issLat.toString()
+                    issLatText = FormatUtils.formatLatitudePlain(auto.issLat)
                 }
                 if (issLonText.isBlank() && auto.issLon != null) {
-                    issLonText = auto.issLon.toString()
+                    issLonText = FormatUtils.formatLongitudePlain(auto.issLon)
                 }
                 if (temperatureText.isBlank() && auto.temperatureC != null) {
                     temperatureText = auto.temperatureC.toString()
@@ -375,11 +394,20 @@ fun ObservationEditorScreen(
     // SAVE HANDLER
     // ---------------------------------------------------------
     fun handleSave() {
+        // Title required
+        if (observationTitle.isBlank()) {
+            titleError = "Title cannot be empty"
+            // focus on title field
+            titleFocusRequester.requestFocus()
+            return
+        }
+
+        // Notes required
         if (notes.isBlank()) {
             notesError = "Notes cannot be empty"
+            // focus on notes field
+            notesFocusRequester.requestFocus()
             return
-        } else {
-            notesError = null
         }
 
         val latitude = latitudeText.toDoubleOrNull()
@@ -494,11 +522,19 @@ fun ObservationEditorScreen(
             // TITLE
             OutlinedTextField(
                 value = observationTitle,
-                onValueChange = { observationTitle = it },
-                label = { Text("Title (optional)") },
-                placeholder = { Text("Short title to identify this observation") },
+                onValueChange = {
+                    observationTitle = it
+                    if (titleError != null && it.isNotBlank()) titleError = null
+                },
+                label = { Text("Title") },
+                isError = titleError != null,
+                supportingText = {
+                    titleError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(titleFocusRequester)
             )
 
             Spacer(Modifier.height(8.dp))
@@ -534,7 +570,7 @@ fun ObservationEditorScreen(
                 OutlinedTextField(
                     value = latitudeText,
                     onValueChange = { latitudeText = it },
-                    label = { Text("Latitude (optional)") },
+                    label = { Text("Latitude") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
@@ -542,7 +578,7 @@ fun ObservationEditorScreen(
                 OutlinedTextField(
                     value = longitudeText,
                     onValueChange = { longitudeText = it },
-                    label = { Text("Longitude (optional)") },
+                    label = { Text("Longitude") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
@@ -560,7 +596,7 @@ fun ObservationEditorScreen(
             OutlinedTextField(
                 value = kpText,
                 onValueChange = { kpText = it },
-                label = { Text("Kp Index (optional)") },
+                label = { Text("Kp Index") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -569,7 +605,7 @@ fun ObservationEditorScreen(
             OutlinedTextField(
                 value = weatherSummary,
                 onValueChange = { weatherSummary = it },
-                label = { Text("Weather summary (optional)") },
+                label = { Text("Weather summary") },
                 placeholder = { Text("Clear, light clouds, windy…") },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -581,7 +617,7 @@ fun ObservationEditorScreen(
                 OutlinedTextField(
                     value = temperatureText,
                     onValueChange = { temperatureText = it },
-                    label = { Text("Temperature °C (optional)") },
+                    label = { Text("Temperature °C") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
@@ -589,7 +625,7 @@ fun ObservationEditorScreen(
                 OutlinedTextField(
                     value = cloudCoverText,
                     onValueChange = { cloudCoverText = it },
-                    label = { Text("Cloud cover % (optional)") },
+                    label = { Text("Cloud cover %") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
@@ -639,7 +675,8 @@ fun ObservationEditorScreen(
                 placeholder = { Text("What did you see? How did the sky look?") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 120.dp),
+                    .heightIn(min = 120.dp)
+                    .focusRequester(notesFocusRequester),
                 maxLines = 6,
                 isError = notesError != null,
                 supportingText = {
