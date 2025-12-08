@@ -26,6 +26,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.celestia.data.model.ObservationEntry
+import androidx.lifecycle.asLiveData
+import com.example.celestia.data.model.WeatherSnapshot
 
 /**
  * Primary ViewModel for Celestia.
@@ -451,4 +454,119 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             onError()
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Journal Entries
+    // -------------------------------------------------------------------------
+
+    val allJournalEntries: LiveData<List<ObservationEntry>> =
+        repo.getAllObservations().asLiveData()
+
+    suspend fun getJournalEntry(id: Int): ObservationEntry? {
+        return repo.getObservationById(id)
+    }
+
+    fun saveJournalEntry(entry: ObservationEntry) {
+        viewModelScope.launch {
+            repo.saveObservation(entry)
+        }
+    }
+
+    fun deleteJournalEntry(entry: ObservationEntry) {
+        viewModelScope.launch {
+            repo.deleteObservation(entry)
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Weather
+    // -------------------------------------------------------------------------
+
+    data class AutoObservationFields(
+        val latitude: Double? = null,
+        val longitude: Double? = null,
+        val kpIndex: Double? = null,
+        val issLat: Double? = null,
+        val issLon: Double? = null,
+        val temperatureC: Double? = null,
+        val cloudCoverPercent: Int? = null,
+        val weatherSummary: String? = null
+    )
+
+    private val _autoObservationFields = MutableLiveData<AutoObservationFields?>(null)
+    val autoObservationFields: LiveData<AutoObservationFields?> = _autoObservationFields
+
+    /**
+     * Auto-populates sky/environment fields for a NEW observation entry:
+     * - Kp Index
+     * - ISS coordinates
+     * - Device latitude/longitude (or default)
+     * - Temperature, cloud cover, weather summary
+     *
+     * Results are pushed into [autoObservationFields].
+     */
+    fun refreshAutoObservationFieldsForNewEntry() {
+        viewModelScope.launch {
+            try {
+                // 1) Kp Index (from cached readings)
+                val kpList = readings.value.orEmpty()
+                val latestKp = getLatestValidKp(kpList)?.estimatedKp
+
+                // 2) ISS (perform a quick refresh)
+                val iss = try {
+                    repo.refreshIssLocation()
+                } catch (e: Exception) {
+                    Log.e("CelestiaVM.Auto", "ISS refresh failed", e)
+                    null
+                }
+
+                val issLat = iss?.latitude
+                val issLon = iss?.longitude
+
+                // 3) Location + weather (device or default)
+                getDeviceLocation(
+                    onResult = { lat, lon ->
+                        viewModelScope.launch {
+                            val weather = repo.fetchCurrentWeather(lat, lon)
+
+                            _autoObservationFields.postValue(
+                                AutoObservationFields(
+                                    latitude = lat,
+                                    longitude = lon,
+                                    kpIndex = latestKp,
+                                    issLat = issLat,
+                                    issLon = issLon,
+                                    temperatureC = weather?.temperatureC,
+                                    cloudCoverPercent = weather?.cloudCoverPercent,
+                                    weatherSummary = weather?.weatherSummary
+                                )
+                            )
+                        }
+                    },
+                    onError = {
+                        viewModelScope.launch {
+                            val weather = repo.fetchCurrentWeather(defaultLat, defaultLon)
+
+                            _autoObservationFields.postValue(
+                                AutoObservationFields(
+                                    latitude = defaultLat,
+                                    longitude = defaultLon,
+                                    kpIndex = latestKp,
+                                    issLat = issLat,
+                                    issLon = issLon,
+                                    temperatureC = weather?.temperatureC,
+                                    cloudCoverPercent = weather?.cloudCoverPercent,
+                                    weatherSummary = weather?.weatherSummary
+                                )
+                            )
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e("CelestiaVM.Auto", "Error refreshing auto observation fields", e)
+                _autoObservationFields.postValue(null)
+            }
+        }
+    }
+
 }

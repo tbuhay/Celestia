@@ -5,6 +5,7 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.example.celestia.BuildConfig
+import com.example.celestia.data.model.ObservationEntry
 import com.example.celestia.data.db.CelestiaDao
 import com.example.celestia.data.model.*
 import com.example.celestia.data.network.AstronautResponse
@@ -13,6 +14,8 @@ import com.example.celestia.utils.AsteroidHelper
 import com.example.celestia.utils.TimeUtils
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
+import com.example.celestia.data.model.OpenMeteoResponse
+import com.example.celestia.data.model.WeatherSnapshot
 
 /**
  * Repository for Celestia — acts as the single source of truth for all data:
@@ -205,5 +208,68 @@ class CelestiaRepository(
         }
 
         return result.sortedBy { it.approachDate }
+    }
+
+    // -------------------------------------------------------------------------
+    // WEATHER
+    // -------------------------------------------------------------------------
+
+    private fun mapWeatherCodeToSummary(code: Int?): String? {
+        if (code == null) return null
+
+        return when (code) {
+            0 -> "Clear"
+            1, 2 -> "Mostly clear"
+            3 -> "Overcast"
+            45, 48 -> "Fog"
+            51, 53, 55 -> "Drizzle"
+            61, 63, 65 -> "Rain"
+            71, 73, 75, 77 -> "Snow"
+            80, 81, 82 -> "Rain showers"
+            95, 96, 99 -> "Thunderstorm"
+            else -> "Unspecified"
+        }
+    }
+
+    suspend fun fetchCurrentWeather(lat: Double, lon: Double): WeatherSnapshot? {
+        return try {
+            val response = RetrofitInstance.weatherApi.getCurrentWeather(
+                latitude = lat,
+                longitude = lon
+            )
+
+            val current = response.current
+
+            if (current == null) {
+                null
+            } else {
+                WeatherSnapshot(
+                    temperatureC = current.temperatureC,
+                    cloudCoverPercent = current.cloudCoverPercent,
+                    weatherSummary = mapWeatherCodeToSummary(current.weatherCode)
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("CelestiaRepo.Weather", "Error fetching weather", e)
+            null
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // JOURNAL
+    // -------------------------------------------------------------------------
+
+    fun getAllObservations(): Flow<List<ObservationEntry>> =
+        dao.getAllObservations()
+
+    suspend fun getObservationById(id: Int): ObservationEntry? =
+        dao.getObservationById(id)
+
+    suspend fun saveObservation(entry: ObservationEntry) {
+        dao.insertObservation(entry)
+    }
+
+    suspend fun deleteObservation(entry: ObservationEntry) {
+        dao.deleteObservation(entry)
     }
 }

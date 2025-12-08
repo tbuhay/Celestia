@@ -415,12 +415,12 @@ private fun ViewingCard(
     navController: NavController
 ) {
     CelestiaCard(
-        iconRes = R.drawable.ic_notification,
+        iconRes = R.drawable.ic_pencil,
         iconTint = CelestiaTeal,
         title = "Placeholder",
         mainRow = {
             Icon(
-                painter = painterResource(id = R.drawable.ic_notification),
+                painter = painterResource(id = R.drawable.ic_note),
                 contentDescription = "Viewing Icon",
                 tint = CelestiaTeal,
                 modifier = Modifier
@@ -437,7 +437,7 @@ private fun ViewingCard(
         },
         description = "Placeholder",
         shape = cardShape,
-        onClick = { null }
+        onClick = { navController.navigate("observation_history") }
     )
 }
 

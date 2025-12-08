@@ -192,6 +192,16 @@ object FormatUtils {
         return "$formatted° $hemi"
     }
 
+    fun formatLatitudePlain(value: Double?): String {
+        if (value == null) return ""
+        return String.format(Locale.US, "%.4f", value)
+    }
+
+    fun formatLongitudePlain(value: Double?): String {
+        if (value == null) return ""
+        return String.format(Locale.US, "%.4f", value)
+    }
+
     /** Formats altitude in kilometers. */
     fun formatAltitude(km: Double): String = "${formatNumber(km)} km"
 

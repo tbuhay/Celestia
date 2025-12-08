@@ -8,6 +8,7 @@ import com.example.celestia.data.model.KpReading
 import com.example.celestia.data.model.IssReading
 import com.example.celestia.data.model.AsteroidApproach
 import com.example.celestia.data.model.LunarPhaseEntity
+import com.example.celestia.data.model.ObservationEntry
 
 /**
  * Main Room database for the Celestia application.
@@ -26,9 +27,10 @@ import com.example.celestia.data.model.LunarPhaseEntity
         KpReading::class,
         IssReading::class,
         AsteroidApproach::class,
-        LunarPhaseEntity::class
+        LunarPhaseEntity::class,
+        ObservationEntry::class
     ],
-    version = 6,
+    version = 8,
     exportSchema = false
 )
 abstract class CelestiaDatabase : RoomDatabase() {
