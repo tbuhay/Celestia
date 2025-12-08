@@ -733,29 +733,38 @@ fun ObservationEditorScreen(
                             horizontalAlignment = Alignment.End
                         ) {
 
+                            // ---- CHOOSE PHOTO BUTTON ----
                             OutlinedButton(
                                 onClick = { photoPickerLauncher.launch("image/*") },
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                                modifier = Modifier.widthIn(min = 130.dp) // <--- prevents wrapping on phones
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Photo,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Text("Choose Photo")
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "Choose Photo",
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
                             }
 
+                            // ---- REMOVE PHOTO ----
                             if (photoUrl.isNotBlank()) {
                                 Text(
                                     text = "Remove Photo",
                                     color = MaterialTheme.colorScheme.error,
                                     modifier = Modifier
                                         .clickable { photoUrl = "" }
-                                        .padding(end = 22.dp),
+                                        .padding(end = 8.dp),
                                     style = MaterialTheme.typography.labelLarge
                                 )
                             }
                         }
+
                     }
                 }
             }
