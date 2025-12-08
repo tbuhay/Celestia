@@ -206,4 +206,22 @@ class CelestiaRepository(
 
         return result.sortedBy { it.approachDate }
     }
+
+    // -------------------------------------------------------------------------
+    // JOURNAL — Observation Entries
+    // -------------------------------------------------------------------------
+
+    fun getAllObservations(): Flow<List<ObservationEntry>> =
+        dao.getAllObservations()
+
+    suspend fun getObservationById(id: Int): ObservationEntry? =
+        dao.getObservationById(id)
+
+    suspend fun saveObservation(entry: ObservationEntry) {
+        dao.insertObservation(entry)
+    }
+
+    suspend fun deleteObservation(entry: ObservationEntry) {
+        dao.deleteObservation(entry)
+    }
 }

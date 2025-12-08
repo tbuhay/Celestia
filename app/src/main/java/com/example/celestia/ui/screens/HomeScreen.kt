@@ -175,9 +175,10 @@ fun HomeScreen(
                     navController = navController
                 )
 
-                ViewingCard(
+                ObservationNotesCard(
                     cardShape = cardShape,
-                    navController = navController
+                    navController = navController,
+                    vm = vm
                 )
 
             } else {
@@ -409,10 +410,32 @@ private fun LunarCard(
  * - Watchlist notifications
  */
 @Composable
-private fun ViewingCard(
+private fun ObservationNotesCard(
     cardShape: RoundedCornerShape,
-    navController: NavController
+    navController: NavController,
+    vm: CelestiaViewModel
 ) {
+    // Observe journal entries
+    val entries by vm.allJournalEntries.observeAsState(emptyList())
+
+    // Get latest entry (if any)
+    val latest = entries.maxByOrNull { it.timestamp }
+
+    // Format timestamp
+    val latestDateText = if (latest != null) {
+        val formatter = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+        formatter.format(java.util.Date(latest.timestamp))
+    } else {
+        "No entries yet"
+    }
+
+    // Description below main row
+    val descriptionText = if (latest != null) {
+        "Last observation: ${latest.observationTitle.ifBlank { "Untitled" }}"
+    } else {
+        "Start a new observation"
+    }
+
     CelestiaCard(
         iconRes = R.drawable.ic_book,
         iconTint = CelestiaGreen,
@@ -427,16 +450,16 @@ private fun ViewingCard(
                     .alignByBaseline()
             )
             Text(
-                text = "Placeholder", /* this will be the date of the most recent entry */
+                text = latestDateText,
                 modifier = Modifier.alignByBaseline(),
                 style = MaterialTheme.typography.titleMedium.copy(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
-        description = "Placeholder", /* We will include a description here for the observation journal*/
+        description = descriptionText,
         shape = cardShape,
-        onClick = { null }
+        onClick = { navController.navigate("observation_history") }
     )
 }
 

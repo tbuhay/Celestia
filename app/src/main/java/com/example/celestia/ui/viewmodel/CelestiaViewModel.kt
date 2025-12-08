@@ -11,6 +11,7 @@ import com.example.celestia.data.db.CelestiaDatabase
 import com.example.celestia.data.model.AsteroidApproach
 import com.example.celestia.data.model.KpHourlyGroup
 import com.example.celestia.data.model.KpReading
+import com.example.celestia.data.model.ObservationEntry
 import com.example.celestia.data.repository.CelestiaRepository
 import com.example.celestia.data.store.ThemeKeys
 import com.example.celestia.data.store.themeDataStore
@@ -451,4 +452,29 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
             onError()
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Observation Entries
+    // -------------------------------------------------------------------------
+    fun saveJournalEntry(entry: ObservationEntry) {
+        viewModelScope.launch {
+            repo.saveObservation(entry)
+        }
+    }
+
+    fun deleteJournalEntry(entry: ObservationEntry) {
+        viewModelScope.launch {
+            repo.deleteObservation(entry)
+        }
+    }
+
+    suspend fun getJournalEntry(id: Int): ObservationEntry? {
+        return repo.getObservationById(id)
+    }
+
+    fun getLatestJournalEntry(entries: List<ObservationEntry>): ObservationEntry? {
+        return entries.maxByOrNull { it.timestamp }
+    }
+
+    val allJournalEntries = repo.getAllObservations().asLiveData()
 }
