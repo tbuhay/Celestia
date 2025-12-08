@@ -1,6 +1,5 @@
 package com.example.celestia.ui.theme
 
-import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -35,7 +34,7 @@ val CelestiaPurple = Color(0xFFA43FE9)
 val CelestiaOrange = Color(0xFFFF7A00)
 
 /** Teal accent used for ISS visuals, orbit markers, and secondary highlights. */
-val CelestiaTeal = Color(0xFF00E5FF)
+val CelestiaGreen = Color(0xFF207E30)
 
 /** Sky-blue mid-tone used for gradients, headings, and ISS cards. */
 val CelestiaSkyBlue = Color(0xFF1E88E5)

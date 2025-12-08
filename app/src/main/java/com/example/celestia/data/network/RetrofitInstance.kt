@@ -1,7 +1,9 @@
 package com.example.celestia.data.network
 
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 /**
  * Centralized provider for all Retrofit API clients used by the Celestia app.
@@ -67,17 +69,23 @@ object RetrofitInstance {
             .create(LunarApi::class.java)
     }
 
-    /**
-     * Retrofit client for NASA’s Near-Earth Object (NEO) API.
-     * Provides asteroid close-approach data.
-     */
+    private val longTimeoutClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
     val asteroidApi: AsteroidApi by lazy {
         Retrofit.Builder()
             .baseUrl(NASA_BASE_URL)
+            .client(longTimeoutClient)   // ⭐ FIXED: Long timeout
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(AsteroidApi::class.java)
     }
+
 
     /**
      * Retrofit client for the Open Notify API.

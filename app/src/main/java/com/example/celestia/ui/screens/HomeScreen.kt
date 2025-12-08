@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.celestia.R
 import com.example.celestia.ui.theme.*
@@ -415,27 +414,27 @@ private fun ViewingCard(
     navController: NavController
 ) {
     CelestiaCard(
-        iconRes = R.drawable.ic_notification,
-        iconTint = CelestiaTeal,
-        title = "Placeholder",
+        iconRes = R.drawable.ic_book,
+        iconTint = CelestiaGreen,
+        title = "Observation Journal",
         mainRow = {
             Icon(
-                painter = painterResource(id = R.drawable.ic_notification),
+                painter = painterResource(id = R.drawable.ic_pencil),
                 contentDescription = "Viewing Icon",
-                tint = CelestiaTeal,
+                tint = CelestiaGreen,
                 modifier = Modifier
                     .size(18.dp)
                     .alignByBaseline()
             )
             Text(
-                text = "Placeholder",
+                text = "Placeholder", /* this will be the date of the most recent entry */
                 modifier = Modifier.alignByBaseline(),
                 style = MaterialTheme.typography.titleMedium.copy(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
-        description = "Placeholder",
+        description = "Placeholder", /* We will include a description here for the observation journal*/
         shape = cardShape,
         onClick = { null }
     )
