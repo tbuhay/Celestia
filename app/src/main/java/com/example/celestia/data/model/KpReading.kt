@@ -34,17 +34,6 @@ import com.google.gson.annotations.SerializedName
 @Entity(tableName = "kp_readings")
 data class KpReading(
 
-    // --- PRESENTATION NOTE ---------------------------------------------------
-    // OLD PROBLEM:
-    // @PrimaryKey(autoGenerate = true) val id: Int = 0
-    //
-    // This allowed multiple entries with the same timestamp to be inserted,
-    // causing the database to grow uncontrollably.
-    //
-    // CURRENT FIX:
-    // Using the NOAA "time_tag" as the actual primary key ensures each reading
-    // is unique and can be safely REPLACED in Room.
-    // -------------------------------------------------------------------------
     @PrimaryKey
     @SerializedName("time_tag")
     val timestamp: String,

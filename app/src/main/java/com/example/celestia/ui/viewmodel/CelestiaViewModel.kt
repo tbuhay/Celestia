@@ -192,12 +192,6 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
 
-                // --- PRESENTATION NOTE ---------------------
-                // This coroutine fetches the ISS position from the API.
-                // Because the map screen observes LiveData from the ViewModel,
-                // the ISS marker automatically moves whenever this refresh function runs.
-                // This demonstrates reactive UI in practice.
-
                 // ISS
                 launch {
                     try {
@@ -392,17 +386,6 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
      * @return List of hourly Kp groups.
      */
 
-    // --- PRESENTATION NOTE (Milestone 2: Making NOAA Data Useful) ----------------
-    // The raw NOAA feed is not very user-friendly — it sends many readings
-    // across different timestamps and sometimes contains invalid values.
-    //
-    // This function:
-    // - Converts UTC timestamps into local time
-    // - Groups all readings by hourly buckets
-    // - Computes average, high, and low Kp values per hour
-    //
-    // This transformed the data into a format the dashboard card could display
-    // clearly, giving users a simple trend preview instead of raw numeric noise.
     fun groupKpReadingsHourly(readings: List<KpReading>): List<KpHourlyGroup> {
         if (readings.isEmpty()) return emptyList()
 
@@ -484,20 +467,6 @@ class CelestiaViewModel(application: Application) : AndroidViewModel(application
      * - Calls [onError] if unavailable or missing permissions
      */
 
-    // --- PRESENTATION NOTE (Challenge 3: UX & Location Fallbacks) ----------------
-    // This function attempts to retrieve the device's last-known location.
-    // It delegates ALL fallback logic to its callers via:
-    //   - onResult() for valid locations
-    //   - onError() when location is null or unavailable
-    //
-    // By keeping this function simple, I was able to implement a clean 3-level
-    // fallback in the Observation Journal feature:
-    //
-    // 1) Device GPS
-    // 2) Home Location saved by the user
-    // 3) Default location (Winnipeg)
-    //
-    // This design improved reliability and made UX more predictable.
     fun getDeviceLocation(
         onResult: (lat: Double, lon: Double) -> Unit,
         onError: () -> Unit

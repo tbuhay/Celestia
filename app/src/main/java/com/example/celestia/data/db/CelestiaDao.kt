@@ -42,20 +42,6 @@ interface CelestiaDao {
      *
      * @param readings List of readings returned from the NOAA API.
      */
-
-    /**
-     * Inserts or replaces a full batch of Kp Index readings.
-     *
-     * Presentation note:
-     * - When the primary key used to be an auto-generated integer,
-     *   this insert method created duplicates on every refresh.
-     *
-     * - After switching the KpReading primary key to the timestamp,
-     *   this REPLACE strategy now keeps the table clean and stable
-     *   (usually ~400 rows instead of 180,000).
-     *
-     * - This solved the lag and performance issues in Milestone 2.
-     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(readings: List<KpReading>)
 
