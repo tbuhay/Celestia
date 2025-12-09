@@ -38,6 +38,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     // DARK MODE
     // ---------------------------------------------------------
 
+    // --- PRESENTATION NOTE (Milestone 1) -----------------------------------------
+    // This is where I implemented persistent Dark/Light Mode.
+    // - 'darkModeEnabled' observes the DataStore preference in real time.
+    // - 'setDarkMode()' writes the new value back to DataStore.
+    // This was my first step toward app-wide theming and understanding state mgmt.
     /** Live preference indicating whether Dark Mode is enabled. */
     val darkModeEnabled: LiveData<Boolean> =
         themeManager.darkModeFlow.asLiveData()

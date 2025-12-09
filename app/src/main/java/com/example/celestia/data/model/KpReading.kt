@@ -20,10 +20,31 @@ import com.google.gson.annotations.SerializedName
  * @property kpIndex The raw Kp Index value (integer 0–9).
  * @property estimatedKp Modelled/estimated Kp value provided by NOAA.
  * @property kpLabel A textual interpretation or category (e.g., “Active”, “Minor Storm”).
+ *
+ * Presentation note:
+ *  * - Previously, I used an auto-generated integer ID as the primary key.
+ *  *   This caused duplicate timestamp records to accumulate every time the API
+ *  *   refreshed, leading to more than 180,000 rows in the table.
+ *  *
+ *  * - Switching to `timestamp` as the primary key ensures each reading is unique,
+ *  *   and `REPLACE` logic in the DAO prevents duplicates entirely.
  */
+
+
 @Entity(tableName = "kp_readings")
 data class KpReading(
 
+    // --- PRESENTATION NOTE ---------------------------------------------------
+    // OLD PROBLEM:
+    // @PrimaryKey(autoGenerate = true) val id: Int = 0
+    //
+    // This allowed multiple entries with the same timestamp to be inserted,
+    // causing the database to grow uncontrollably.
+    //
+    // CURRENT FIX:
+    // Using the NOAA "time_tag" as the actual primary key ensures each reading
+    // is unique and can be safely REPLACED in Room.
+    // -------------------------------------------------------------------------
     @PrimaryKey
     @SerializedName("time_tag")
     val timestamp: String,

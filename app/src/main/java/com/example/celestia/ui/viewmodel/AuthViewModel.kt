@@ -123,6 +123,13 @@ class AuthViewModel : ViewModel() {
      * - User is authenticated
      * - Display name is updated
      */
+
+    // --- PRESENTATION NOTE -------------------------
+    // Firebase authentication was implemented in this milestone.
+    // The challenge here was resolving SHA key mismatches between devices,
+    // which prevented Google/GitHub login from working on my laptop.
+    //
+    // These methods show where Firebase authenticates the user and updates state.
     fun signInWithGoogle(idToken: String) {
         val credential = GoogleAuthProvider.getCredential(idToken, null)
 
