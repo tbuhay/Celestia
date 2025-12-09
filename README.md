@@ -3,7 +3,7 @@
 
 **Celestia is an Android application that brings space weather, orbital data, and astronomical insights together in one elegant dashboard.**
 
-**It provides real-time geomagnetic activity (Kp Index), ISS tracking, lunar phase data, and asteroid information, powered by modern Android technologies such as Jetpack Compose, MVVM, Room, Retrofit, Firebase Authentication, and Google Maps.**
+**It provides real-time geomagnetic activity (Kp Index), ISS tracking, lunar phase data, asteroid information, and an Observation Journal, powered by modern Android technologies such as Jetpack Compose, MVVM, Room, Retrofit, Firebase Authentication, and Google Maps.**
 
 **This project was created as part of an ongoing learning journey into Android development, clean architecture, API integration, and UI/UX design.**
 
@@ -36,12 +36,24 @@
 3. Miss distance, relative speed, orbit details
 4. Next close approach
 
+#### 📓 Observation Journal Screen *(New in v1.1.0)*
+1. Create, update, and delete observation entries
+2. Optional photo attachment per entry
+3. Auto-filled fields using latest data:
+    - Kp Index
+    - ISS position
+    - Weather snapshot (temperature, cloud cover, summary)
+    - Coordinates (device → saved Home Location → Winnipeg fallback)
+4. Manual location entry supported if auto-fill is not desired
+
 #### ⚙️ Settings Screen
 1. Dark Mode toggle
 2. 12h / 24h time format
 3. Refresh on launch
 4. Device location toggle
-5. Firebase Sign-Out
+5. Home Location (city / state or province / country)
+6. Notification preferences (Kp alerts, ISS alerts)
+7. Firebase Sign-Out
 
 ## 🛠️ Tech Stack
 #### Languages & UI
@@ -80,11 +92,11 @@ Room DB + Retrofit APIs
 
 #### Roles:
 
-**UI:** Displays data released by ViewModels
-**ViewModels:** Holds UI state + business logic
-**Repositories:** Single source of truth
-**Room:** Caches data for offline use
-**Retrofit:** Fetches data from remote APIs
+**UI:** Displays data released by ViewModels  
+**ViewModels:** Holds UI state + business logic  
+**Repositories:** Single source of truth  
+**Room:** Caches data for offline use  
+**Retrofit:** Fetches data from remote APIs  
 **DataStore:** Persists user preferences
 
 ### 📁 Project Structure
@@ -111,6 +123,8 @@ com.example.celestia/
 - Android Studio Ladybug or newer
 - Android SDK 24+
 - Google Maps API Key
+- NASA NEO API Key
+- Lunar API Key
 - Firebase project
 - Internet connection
 
@@ -130,11 +144,12 @@ cd celestia
 
 Depending on your setup, you may need the following:
 
-- Service	Key Location
-- NASA NEO	local.properties or BuildConfig
-- Lunar API (IPGeolocation)	BuildConfig or secure key file
-- Google Maps	local.properties → MAPS_API_KEY="your_key"
-- Firebase	app/google-services.json
+| Service | Key Location |
+|--------|--------------|
+| NASA NEO | local.properties or BuildConfig |
+| Lunar API (IPGeolocation) | BuildConfig or secure key file |
+| Google Maps | local.properties → MAPS_API_KEY="your_key" |
+| Firebase | app/google-services.json |
 
 **Example (local.properties):**
 
@@ -165,6 +180,7 @@ Celestia uses a simple Git workflow:
 | v1.0.0 | Initial release|
 | v1.0.1 | Patches/UI improvements|
 | v1.0.2 | Accessibility improvments |
+| v1.1.0 | Observation Journal, Home Location & auto-fill |
 
 This mirrors real-world portfolio-ready structure.
 
@@ -173,7 +189,7 @@ This mirrors real-world portfolio-ready structure.
 | Concept | Priority |
 |:--------|:---------|
 | Widget support (Kp Index, Moon Phase) | Low |
-| Geomagnetic storm alerts | High
+| Geomagnetic storm alerts | High |
 | ISS pass predictions | Low |
 | Improved offline caching | Medium |
 | Dynamic Material You theming | Low |
@@ -207,7 +223,7 @@ The goal is clarity, maintainability, and real-time space data visualized in a c
 If you’re reviewing this project for a portfolio or academic evaluation — thank you!
 
 ### 📦 Download APK
-➡️ **You can download the latest Celestia build here:**
-https://drive.google.com/file/d/1xMT3SFIMMMmiuCKojGqnbNyKJc5_XvZ1/view?usp=sharing
+➡️ **You can download the latest Celestia build (v1.1.0) here:**
+https://drive.google.com/file/d/1xMT3SFIMMMmiuCKojGqnbNyKJc5_XvZ1/view?usp=drive_link
 
 *(You may need to enable "Install unknown apps" on your device.)*
