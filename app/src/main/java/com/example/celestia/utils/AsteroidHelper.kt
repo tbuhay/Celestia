@@ -10,107 +10,71 @@ import java.time.LocalDate
  * Logic here focuses purely on interpretation and presentation rules (e.g.,
  * "meaningful" asteroids, sorting criteria, upcoming days).
  */
+
 object AsteroidHelper {
 
-    // === Diameter & Basic Properties ===
-
-    /**
-     * Computes the average estimated diameter of an asteroid in meters.
-     *
-     * @param asteroid The asteroid approach object containing min/max diameters.
-     * @return The average diameter in meters.
-     */
+    // -------------------------------
+    // Diameter helpers
+    // -------------------------------
     private fun avgDiameter(asteroid: AsteroidApproach): Double {
         return (asteroid.diameterMinMeters + asteroid.diameterMaxMeters) / 2.0
     }
 
-    /**
-     * Determines whether an asteroid is considered "meaningful" for user display.
-     * A meaningful asteroid must:
-     * - Have an average diameter ≥ 120m
-     * - Have a miss distance ≤ 0.5 AU
-     *
-     * @param asteroid The asteroid to evaluate.
-     * @return True if the asteroid meets visibility criteria.
-     */
-    private fun isMeaningful(asteroid: AsteroidApproach): Boolean {
+    // -------------------------------
+    // PHA classification (NASA rules)
+    // -------------------------------
+    fun isPotentiallyHazardous(asteroid: AsteroidApproach): Boolean {
         val diameter = avgDiameter(asteroid)
-        val isBigEnough = diameter >= 120.0
-        val isCloseEnough = asteroid.missDistanceAu <= 0.5
-        return isBigEnough && isCloseEnough
+        return diameter >= 140.0 && asteroid.missDistanceAu <= 0.05
     }
 
-    // === Date Window Logic ===
+    // -------------------------------
+    // Meaningful asteroid (UI list)
+    // -------------------------------
+    private fun isMeaningful(asteroid: AsteroidApproach): Boolean {
+        val diameter = avgDiameter(asteroid)
+        val bigEnough = diameter >= 50.0       // lowered from 120m → 50m
+        val closeEnough = asteroid.missDistanceAu <= 0.5
+        return bigEnough && closeEnough
+    }
 
-    /**
-     * Returns true if the given date (yyyy-MM-dd) occurs within the next 7 days,
-     * including today.
-     *
-     * @param dateString The date string in ISO yyyy-MM-dd format.
-     * @return True if the date is between today and seven days from now.
-     */
-    private fun isWithinNext7Days(dateString: String): Boolean {
+    // -------------------------------
+    // Next 7 days
+    // -------------------------------
+    private fun isWithinNext7Days(dateStr: String): Boolean {
         val today = LocalDate.now()
-        val date = LocalDate.parse(dateString)
+        val date = LocalDate.parse(dateStr)
         return !date.isBefore(today) && !date.isAfter(today.plusDays(7))
     }
 
-    // === Meaningful Asteroid Lists ===
-
-    /**
-     * Filters the list to meaningful asteroids that occur within the next 7 days,
-     * sorted first by distance from Earth, then by date.
-     *
-     * @param list Full asteroid approach dataset.
-     * @return A sorted list of meaningful asteroid approaches.
-     */
-    fun getMeaningfulAsteroids(list: List<AsteroidApproach>): List<AsteroidApproach> {
-        return list
-            .filter { asteroid ->
-                isMeaningful(asteroid) && isWithinNext7Days(asteroid.approachDate)
-            }
-            .sortedWith(
-                compareBy<AsteroidApproach> { it.missDistanceAu }
-                    .thenBy { LocalDate.parse(it.approachDate) }
-            )
-    }
-
-    /**
-     * Returns asteroids that qualify for the “next 7 days” option of the UI.
-     * Meaningful asteroids only, sorted chronologically.
-     *
-     * @param list The asteroid approaches.
-     * @return A list sorted by approach date.
-     */
+    // -------------------------------
+    // LIST FOR UI (refined)
+    // -------------------------------
     fun getNext7DaysList(list: List<AsteroidApproach>): List<AsteroidApproach> {
         return list
             .filter { isMeaningful(it) && isWithinNext7Days(it.approachDate) }
-            .sortedBy { LocalDate.parse(it.approachDate) }
+            .sortedBy { it.missDistanceAu }
     }
 
-    // === Featured Asteroid Selection ===
-
-    /**
-     * Selects the best asteroid to feature in the UI.
-     * Priority order:
-     * 1. First meaningful asteroid from the next 7 days (sorted by distance).
-     * 2. If none, the closest asteroid within the next 7 days.
-     * 3. If none, the closest asteroid overall.
-     *
-     * @param list The asteroid approach list.
-     * @return The asteroid to be featured, or null if list is empty.
-     */
+    // -------------------------------
+    // Featured asteroid
+    // -------------------------------
     fun getFeaturedAsteroid(list: List<AsteroidApproach>): AsteroidApproach? {
         if (list.isEmpty()) return null
 
-        val meaningful = getMeaningfulAsteroids(list)
+        val next7 = list.filter { isWithinNext7Days(it.approachDate) }
+
+        // Priority 1 — PHA asteroid first
+        val pha = next7.filter { isPotentiallyHazardous(it) }
+            .minByOrNull { it.missDistanceAu }
+        if (pha != null) return pha
+
+        // Priority 2 — meaningful (≥50m and ≤0.5 AU)
+        val meaningful = next7.filter { isMeaningful(it) }
+            .sortedBy { it.missDistanceAu }
         if (meaningful.isNotEmpty()) return meaningful.first()
 
-        val next7 = list.filter { isWithinNext7Days(it.approachDate) }
-        if (next7.isNotEmpty()) {
-            return next7.minByOrNull { it.missDistanceAu }
-        }
-
-        return list.minByOrNull { it.missDistanceAu }
+        // Fallback: closest asteroid in next 7 days
+        return next7.minByOrNull { it.missDistanceAu }
     }
 }

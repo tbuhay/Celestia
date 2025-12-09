@@ -26,12 +26,20 @@ import androidx.navigation.NavController
 import com.example.celestia.R
 import com.example.celestia.data.model.AsteroidApproach
 import com.example.celestia.ui.theme.CelestiaHazardRed
-import com.example.celestia.ui.theme.CelestiaHazardRedLight
-import com.example.celestia.ui.theme.TextPrimary
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+/**
+ * Screen displaying asteroid tracking information:
+ * - A featured asteroid based on size and miss distance
+ * - A 7-day list of upcoming close approaches
+ * - Informational classification card
+ *
+ * Data is sourced from the ViewModel which exposes:
+ * - Raw asteroid list
+ * - Transformation helpers (featured object, weekly list)
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AsteroidTrackingScreen(
@@ -39,10 +47,8 @@ fun AsteroidTrackingScreen(
     vm: CelestiaViewModel = viewModel()
 ) {
     val rawList = vm.asteroidList.observeAsState(emptyList()).value
-
     val featured = vm.getFeaturedAsteroid(rawList)
     val weekList = vm.getNext7DaysList(rawList)
-
     val cardShape = RoundedCornerShape(20.dp)
 
     Scaffold(
@@ -77,7 +83,6 @@ fun AsteroidTrackingScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
-            // FEATURED
             if (featured != null) {
                 item {
                     Text(
@@ -102,7 +107,6 @@ fun AsteroidTrackingScreen(
                 }
             }
 
-            // UPCOMING LIST
             item {
                 Text(
                     "Upcoming Close Approaches (Next 7 Days)",
@@ -124,6 +128,14 @@ fun AsteroidTrackingScreen(
     }
 }
 
+/**
+ * Large featured card for the highest-priority asteroid.
+ * Displays:
+ * - Name
+ * - Hazard status badge
+ * - Classification text
+ * - Metric block: diameter, miss distance, velocity, date
+ */
 @Composable
 fun FeaturedAsteroidCard(
     asteroid: AsteroidApproach,
@@ -187,6 +199,9 @@ fun FeaturedAsteroidCard(
     }
 }
 
+/**
+ * Smaller list-style card used for the 7-day upcoming list.
+ */
 @Composable
 fun AsteroidListCard(
     asteroid: AsteroidApproach,
@@ -248,11 +263,17 @@ fun AsteroidListCard(
     }
 }
 
+/**
+ * Displays formatted metrics:
+ * - Closest approach date
+ * - Miss distance
+ * - Average diameter
+ * - Velocity (km/s)
+ */
 @Composable
 fun MetricsRow(asteroid: AsteroidApproach) {
     val date = LocalDate.parse(asteroid.approachDate)
     val formattedDate = date.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))
-
     val avgDiameter = ((asteroid.diameterMinMeters + asteroid.diameterMaxMeters) / 2).toInt()
     val kmPerSecond = asteroid.relativeVelocityKph / 3600.0
 
@@ -292,6 +313,9 @@ fun MetricsRow(asteroid: AsteroidApproach) {
     }
 }
 
+/**
+ * Row showing a small icon, label, and value for a single asteroid metric.
+ */
 @Composable
 fun MetricItem(icon: Int, label: String, value: String) {
     Row(
@@ -322,6 +346,9 @@ fun MetricItem(icon: Int, label: String, value: String) {
     }
 }
 
+/**
+ * Red pill-style badge indicating a hazardous asteroid.
+ */
 @Composable
 fun HazardBadge() {
     Surface(
@@ -341,6 +368,9 @@ fun HazardBadge() {
     }
 }
 
+/**
+ * Informational box explaining NASA's PHA classification when an asteroid is hazardous.
+ */
 @Composable
 fun HazardWarningBox() {
     Surface(
@@ -349,7 +379,7 @@ fun HazardWarningBox() {
         border = BorderStroke(1.dp, CelestiaHazardRed),
         modifier = Modifier.semantics {
             contentDescription =
-                "Hazard explanation: This asteroid is classified as potentially hazardous due to its size and close approach distance to Earth."   // ★ A11Y FIX
+                "Hazard explanation: This asteroid is classified as potentially hazardous due to its size and close approach distance to Earth."
         }
     ) {
         Row(
@@ -366,6 +396,10 @@ fun HazardWarningBox() {
     }
 }
 
+/**
+ * Informational card at the bottom of the screen explaining NASA's
+ * classification system for PHA objects.
+ */
 @Composable
 fun ClassificationCard(shape: RoundedCornerShape) {
     ElevatedCard(

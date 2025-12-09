@@ -40,6 +40,24 @@ import com.google.android.gms.common.api.ApiException
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
+/**
+ * Registration screen for Celestia.
+ *
+ * Features:
+ * - Email/password sign-up
+ * - Google OAuth account creation (via Firebase)
+ * - GitHub OAuth account creation
+ * - Input validation with toast feedback
+ * - Password visibility toggle
+ * - Automatic redirection to Home after successful registration
+ *
+ * When a user successfully registers:
+ * - They are navigated to `"home"`
+ * - The `"register"` screen is removed from the back stack
+ *
+ * @param navController Used to navigate after successful sign-up or return to login.
+ * @param vm ViewModel handling Firebase authentication logic.
+ */
 @Composable
 fun RegisterScreen(
     navController: NavController,
@@ -48,12 +66,15 @@ fun RegisterScreen(
     val context = LocalContext.current
     val activity = context as Activity
 
-    // Initialize AuthService once
+    // Initialize Firebase AuthService only once
     LaunchedEffect(Unit) { vm.init(context) }
 
-    // -------------------------
-    // GOOGLE SIGN-IN SETUP
-    // -------------------------
+    // ---------------------------------------------------------
+    // GOOGLE SIGN-IN CONFIGURATION
+    // ---------------------------------------------------------
+    /**
+     * Constructs GoogleSignInOptions and GoogleSignInClient once and remembers them.
+     */
     val gso = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(context.getString(R.string.default_web_client_id))
@@ -65,6 +86,10 @@ fun RegisterScreen(
 
     var toastMessage by remember { mutableStateOf<String?>(null) }
 
+    /**
+     * Launcher that receives the result of Google OAuth and forwards
+     * the ID token to the ViewModel.
+     */
     val googleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -72,6 +97,7 @@ fun RegisterScreen(
         try {
             val account = task.getResult(ApiException::class.java)
             val idToken = account.idToken
+
             if (idToken != null) {
                 vm.signInWithGoogle(idToken)
             } else {
@@ -82,9 +108,9 @@ fun RegisterScreen(
         }
     }
 
-    // -------------------------
+    // ---------------------------------------------------------
     // INPUT STATE
-    // -------------------------
+    // ---------------------------------------------------------
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -92,9 +118,13 @@ fun RegisterScreen(
     val isAuthenticated by vm.isAuthenticated.observeAsState(false)
     val errorMessage by vm.errorMessage.observeAsState()
 
-    // -------------------------
+    // ---------------------------------------------------------
     // AUTH EFFECTS
-    // -------------------------
+    // ---------------------------------------------------------
+
+    /**
+     * Navigate to Home when registration completes.
+     */
     LaunchedEffect(isAuthenticated) {
         if (isAuthenticated) {
             navController.navigate("home") {
@@ -103,6 +133,9 @@ fun RegisterScreen(
         }
     }
 
+    /**
+     * Display any authentication errors via custom toast.
+     */
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
             toastMessage = it
@@ -110,9 +143,9 @@ fun RegisterScreen(
         }
     }
 
-    // -------------------------
-    // UI (fully preserved formatting)
-    // -------------------------
+    // ---------------------------------------------------------
+    // UI — REGISTRATION FORM
+    // ---------------------------------------------------------
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -135,12 +168,17 @@ fun RegisterScreen(
             ),
             elevation = CardDefaults.elevatedCardElevation(8.dp)
         ) {
+
             Column(
                 modifier = Modifier
                     .padding(24.dp)
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
+                // ---------------------------------------------------------
+                // HEADER TEXT
+                // ---------------------------------------------------------
                 Text(
                     "Create Your Celestia Account",
                     style = MaterialTheme.typography.headlineSmall.copy(
@@ -153,7 +191,9 @@ fun RegisterScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Name field
+                // ----------------------
+                // NAME FIELD
+                // ----------------------
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -164,7 +204,9 @@ fun RegisterScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // Email field
+                // ----------------------
+                // EMAIL FIELD
+                // ----------------------
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -175,7 +217,9 @@ fun RegisterScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // Password field
+                // ----------------------
+                // PASSWORD FIELD
+                // ----------------------
                 var passwordVisible by remember { mutableStateOf(false) }
 
                 OutlinedTextField(
@@ -189,11 +233,7 @@ fun RegisterScreen(
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (passwordVisible) {
-                                    "Hide password"
-                                } else {
-                                    "Show password"
-                                }
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
                             )
                         }
                     },
@@ -202,7 +242,9 @@ fun RegisterScreen(
 
                 Spacer(Modifier.height(20.dp))
 
-                // Email Registration
+                // ---------------------------------------------------------
+                // EMAIL/PASSWORD REGISTRATION BUTTON
+                // ---------------------------------------------------------
                 Button(
                     onClick = {
                         when {
@@ -217,10 +259,13 @@ fun RegisterScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF1E63FF)
                     ),
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Register",
+                    Text(
+                        "Register",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -234,16 +279,18 @@ fun RegisterScreen(
 
                 Spacer(Modifier.height(20.dp))
 
-                // -----------------------------
-                // ORIGINAL GOOGLE BUTTON
-                // -----------------------------
+                // ---------------------------------------------------------
+                // GOOGLE SIGN-UP BUTTON
+                // ---------------------------------------------------------
                 Button(
                     onClick = {
                         googleClient.signOut().addOnCompleteListener {
                             googleLauncher.launch(googleClient.signInIntent)
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                     shape = RoundedCornerShape(25.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFD9D9D9)
@@ -267,12 +314,14 @@ fun RegisterScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // -----------------------------
-                // ORIGINAL GITHUB BUTTON
-                // -----------------------------
+                // ---------------------------------------------------------
+                // GITHUB SIGN-UP BUTTON
+                // ---------------------------------------------------------
                 Button(
                     onClick = { vm.githubLogin(activity) },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                     shape = RoundedCornerShape(25.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFD9D9D9)
@@ -296,9 +345,14 @@ fun RegisterScreen(
             }
         }
 
+        // ---------------------------------------------------------
+        // CUSTOM CELESTIA TOAST FEEDBACK
+        // ---------------------------------------------------------
         toastMessage?.let { msg ->
             Box(
-                modifier = Modifier.fillMaxSize().padding(bottom = 40.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 40.dp),
                 contentAlignment = Alignment.BottomCenter
             ) {
                 CelestiaToast(

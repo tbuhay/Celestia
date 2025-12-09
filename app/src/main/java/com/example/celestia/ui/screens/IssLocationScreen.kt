@@ -29,10 +29,32 @@ import androidx.navigation.NavController
 import com.example.celestia.ui.viewmodel.CelestiaViewModel
 import com.example.celestia.ui.viewmodel.SettingsViewModel
 import com.example.celestia.utils.FormatUtils
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import kotlinx.coroutines.delay
 
+/**
+ * **Real-time ISS Tracking Screen**
+ *
+ * Displays live positional and orbital data for the International Space Station,
+ * paired with a highly animated Google Maps view that smoothly interpolates the ISS
+ * movement in low Earth orbit.
+ *
+ * Key Features:
+ * - Live ISS latitude, longitude, altitude, and velocity
+ * - Auto-refresh every **2 seconds** for near real-time accuracy
+ * - Smooth camera interpolation that follows the ISS unless the user interacts
+ * - Current astronaut count aboard the ISS
+ * - Informational “About the ISS” section
+ *
+ * This screen relies on reactive state updates from [CelestiaViewModel] and respects
+ * the user’s preferred time format via [SettingsViewModel].
+ *
+ * @param navController Navigation controller for returning to the previous screen.
+ * @param vm Main ViewModel providing ISS data and astronaut counts.
+ */
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,17 +62,33 @@ fun IssLocationScreen(
     navController: NavController,
     vm: CelestiaViewModel
 ) {
+    // Live ISS data streams
     val issReading by vm.issReading.observeAsState()
     val astronautCount by vm.astronautCount.observeAsState(0)
 
+    // Retrieve user’s time format preference (12h vs 24h)
     val settingsVM: SettingsViewModel = viewModel()
     val use24h = settingsVM.timeFormat24h.observeAsState(true).value
 
     val scrollState = rememberScrollState()
     val cardShape = RoundedCornerShape(14.dp)
 
-    // Load astronaut count when screen enters
+    /**
+     * Fetch the current astronaut count immediately when the screen loads.
+     */
     LaunchedEffect(Unit) { vm.fetchAstronauts() }
+
+    /**
+     * Continuously refresh ISS + astronaut data every 2 seconds.
+     * This loop runs for the life of the screen.
+     */
+    LaunchedEffect(Unit) {
+        while (true) {
+            vm.refresh()
+            vm.fetchAstronauts()
+            delay(2_000)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -62,15 +100,8 @@ fun IssLocationScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background),
-                actions = {
-                    IconButton(onClick = {
-                        vm.refresh()
-                        vm.fetchAstronauts()
-                    }) {
-                        Icon(Icons.Default.Refresh, "Refresh")
-                    }
-                }
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { padding ->
@@ -92,7 +123,7 @@ fun IssLocationScreen(
                     .border(1.dp, Color(0x33FFFFFF), cardShape),
                 shape = cardShape,
                 colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
                 Column(
@@ -100,43 +131,12 @@ fun IssLocationScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
 
-                    // HEADER
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
-                                        )
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Public,
-                                contentDescription = null,
-                                tint = Color(0xFFB39DDB)
-                            )
-                        }
-
-                        Spacer(Modifier.width(12.dp))
-
-                        Column {
-                            Text("International Space Station", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "Live Position",
-                                style = MaterialTheme.typography.labelSmall.copy(color = Color.LightGray)
-                            )
-                        }
-                    }
+                    // Header (badge + titles)
+                    HeaderSection()
 
                     HorizontalDivider()
 
-                    // DATA
+                    // Live ISS data
                     issReading?.let { reading ->
 
                         StatRow(
@@ -180,11 +180,9 @@ fun IssLocationScreen(
             }
 
             // ---------------------------------------------------------------------
-            // MAP CARD
+            // GOOGLE MAP CARD (Live ISS Tracking)
             // ---------------------------------------------------------------------
-            val issPos = remember(issReading) {
-                issReading?.let { LatLng(it.latitude, it.longitude) }
-            }
+            val issPos = issReading?.let { LatLng(it.latitude, it.longitude) }
 
             ElevatedCard(
                 modifier = Modifier
@@ -192,25 +190,93 @@ fun IssLocationScreen(
                     .height(300.dp),
                 shape = cardShape
             ) {
-
                 if (issPos != null) {
+
+                    /**
+                     * Tracks whether the user is actively interacting with the map.
+                     * When true, automatic camera tracking is temporarily disabled.
+                     */
+                    var isUserInteracting by remember { mutableStateOf(false) }
+
+                    // Interpolation values for smooth animation
+                    var previousPos by remember { mutableStateOf(issPos) }
+                    var targetPos by remember { mutableStateOf(issPos) }
+                    var progress by remember { mutableFloatStateOf(1f) }
+
+                    // Google Maps camera controller
                     val cameraState = rememberCameraPositionState {
                         position = CameraPosition.fromLatLngZoom(issPos, 4.5f)
                     }
 
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraState
-                    ) {
-                        Marker(
-                            state = MarkerState(issPos),
-                            title = "ISS",
-                            snippet = FormatUtils.formatCoordinates(
-                                issReading!!.latitude,
-                                issReading!!.longitude
-                            )
+                    var mapLoaded by remember { mutableStateOf(false) }
+
+                    Box(modifier = Modifier.fillMaxSize()) {
+
+                        GoogleMap(
+                            modifier = Modifier.matchParentSize(),
+                            cameraPositionState = cameraState,
+                            onMapLoaded = { mapLoaded = true }
                         )
+
+                        // Center marker representing ISS location
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = "ISS Marker",
+                            tint = Color(0xFFB39DDB),
+                            modifier = Modifier
+                                .size(40.dp)
+                                .align(Alignment.Center)
+                        )
+
+                        // Detect when the user moves/zooms the map
+                        LaunchedEffect(cameraState.isMoving) {
+                            isUserInteracting = cameraState.isMoving
+                        }
                     }
+
+                    /**
+                     * Update animation target whenever the ISS position changes.
+                     */
+                    LaunchedEffect(issPos) {
+                        if (mapLoaded) {
+                            previousPos = targetPos
+                            targetPos = issPos
+                            progress = 0f
+                        }
+                    }
+
+                    /**
+                     * Smooth camera interpolation loop — runs until the movement is complete
+                     * or the user interacts with the map.
+                     */
+                    LaunchedEffect(previousPos, targetPos, mapLoaded) {
+                        if (!mapLoaded) return@LaunchedEffect
+
+                        val duration = 1200L
+                        val startTime = System.currentTimeMillis()
+
+                        while (progress < 1f) {
+
+                            // Cancel animation if user interacts
+                            if (isUserInteracting) break
+
+                            val elapsed = System.currentTimeMillis() - startTime
+                            progress = (elapsed / duration.toFloat()).coerceIn(0f, 1f)
+
+                            val interpolated = LatLng(
+                                previousPos.latitude + (targetPos.latitude - previousPos.latitude) * progress,
+                                previousPos.longitude + (targetPos.longitude - previousPos.longitude) * progress
+                            )
+
+                            cameraState.position =
+                                CameraPosition.fromLatLngZoom(interpolated, cameraState.position.zoom)
+
+                            cameraState.move(CameraUpdateFactory.newLatLng(interpolated))
+
+                            delay(16)
+                        }
+                    }
+
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Loading ISS location...", color = Color.Gray)
@@ -219,13 +285,16 @@ fun IssLocationScreen(
             }
 
             // ---------------------------------------------------------------------
-            // INFO CARD
+            // ABOUT ISS CARD
             // ---------------------------------------------------------------------
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, Color(0x33FFFFFF), cardShape),
-                shape = cardShape
+                shape = cardShape,
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -249,6 +318,62 @@ fun IssLocationScreen(
     }
 }
 
+/**
+ * Header section for the main ISS data card.
+ *
+ * Displays:
+ * - A circular gradient icon badge
+ * - Title (“International Space Station”)
+ * - Subtitle (“Live Position”)
+ */
+@Composable
+private fun HeaderSection() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Public,
+                contentDescription = null,
+                tint = Color(0xFFB39DDB)
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Column {
+            Text("International Space Station", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Live Position",
+                style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
+            )
+        }
+    }
+}
+
+/**
+ * A reusable labeled stat row used inside ISS data cards.
+ *
+ * Displays:
+ * - A small icon
+ * - A label (“Altitude”, “Velocity”, etc.)
+ * - A formatted value
+ *
+ * @param icon Icon representing the metric type.
+ * @param label Short descriptor for the displayed value.
+ * @param value The formatted value to present.
+ */
 @Composable
 private fun StatRow(
     icon: ImageVector,

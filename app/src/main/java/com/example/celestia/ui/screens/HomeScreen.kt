@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.celestia.R
 import com.example.celestia.ui.theme.*
@@ -30,9 +29,26 @@ import com.example.celestia.utils.LunarHelper
 import com.google.firebase.auth.FirebaseAuth
 import java.util.Calendar
 
-// -----------------------------------------------------------------------------
-// HOME SCREEN
-// -----------------------------------------------------------------------------
+/**
+ * **Home screen of the Celestia application.**
+ *
+ * This screen acts as the user’s personalized dashboard and displays a summary of
+ * several space-weather systems, including:
+ *
+ * - **Kp Index** (geomagnetic activity)
+ * - **International Space Station** location
+ * - **Asteroid close-approach data**
+ * - **Current lunar phase**
+ * - **Latest Observation Journal entry**
+ *
+ * The UI reacts to state exposed by [CelestiaViewModel] and user preferences from
+ * [SettingsViewModel]. If the user has enabled *Refresh on Launch*, the screen will
+ * automatically trigger a full data refresh on first composition.
+ *
+ * @param navController Used for navigating to details screens (ISS, Kp Index, etc.).
+ * @param vm The main Celestia ViewModel providing NOAA, ISS, lunar, asteroid, and journal data.
+ * @param settingsVM ViewModel managing persistent user preferences stored in DataStore.
+ */
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,9 +57,9 @@ fun HomeScreen(
     vm: CelestiaViewModel,
     settingsVM: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
-    // -------------------------------------------------------------------------
-    // State Observers
-    // -------------------------------------------------------------------------
+    // ------------------------------
+    // LiveData observers
+    // ------------------------------
     val readings by vm.readings.observeAsState(emptyList())
     val issReading by vm.issReading.observeAsState()
     val lunarPhase by vm.lunarPhase.observeAsState()
@@ -55,25 +71,21 @@ fun HomeScreen(
     val scrollState = rememberScrollState()
     val cardShape = RoundedCornerShape(14.dp)
 
-    // User
+    // ------------------------------
+    // User identity & greeting
+    // ------------------------------
     val user = FirebaseAuth.getInstance().currentUser
     val userName = user?.displayName ?: "Explorer"
-
-    // -------------------------------------------------------------------------
-    // Greeting Logic
-    // -------------------------------------------------------------------------
     val greeting = remember { getGreetingMessage() }
 
-    // -------------------------------------------------------------------------
-    // Refresh on Launch
-    // -------------------------------------------------------------------------
+    /**
+     * Triggers an automatic full refresh on first composition when the user
+     * has enabled "Refresh on Launch" in settings.
+     */
     LaunchedEffect(refreshOnLaunch) {
         if (refreshOnLaunch) vm.refresh()
     }
 
-    // -------------------------------------------------------------------------
-    // Scaffold
-    // -------------------------------------------------------------------------
     Scaffold(
         topBar = {
             TopAppBar(
@@ -86,6 +98,7 @@ fun HomeScreen(
                     )
                 },
                 actions = {
+                    // Manual refresh button
                     IconButton(onClick = { vm.refresh() }) {
                         Icon(
                             Icons.Default.Refresh,
@@ -95,6 +108,7 @@ fun HomeScreen(
                         )
                     }
 
+                    // Navigate to settings
                     IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_settings),
@@ -111,9 +125,6 @@ fun HomeScreen(
         }
     ) { padding ->
 
-        // ---------------------------------------------------------------------
-        // Screen Content
-        // ---------------------------------------------------------------------
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -124,7 +135,9 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // Greeting Header
+            // ------------------------------
+            // Greeting header
+            // ------------------------------
             Text(
                 text = "$greeting, $userName",
                 style = MaterialTheme.typography.titleLarge.copy(
@@ -133,7 +146,7 @@ fun HomeScreen(
             )
 
             Text(
-                text = "Here’s what’s happening in the cosmos today.",
+                text = "Your space weather briefing is ready.",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
@@ -141,9 +154,9 @@ fun HomeScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // -----------------------------------------------------------------
-            // DATA CARDS
-            // -----------------------------------------------------------------
+            // ------------------------------
+            // Dashboard Cards
+            // ------------------------------
             if (readings.isNotEmpty()) {
 
                 KpCard(
@@ -172,6 +185,12 @@ fun HomeScreen(
                     navController = navController
                 )
 
+                ObservationNotesCard(
+                    cardShape = cardShape,
+                    navController = navController,
+                    vm = vm
+                )
+
             } else {
                 Text(
                     text = "No data loaded yet. Tap Reload to fetch current conditions.",
@@ -184,9 +203,11 @@ fun HomeScreen(
     }
 }
 
-// -----------------------------------------------------------------------------
-// HELPERS
-// -----------------------------------------------------------------------------
+/**
+ * Returns a greeting message based on the user's local time of day.
+ *
+ * @return `"Good morning"`, `"Good afternoon"`, `"Good evening"`, or `"Hello"` as fallback.
+ */
 private fun getGreetingMessage(): String {
     val cal = Calendar.getInstance()
     val hour12 = cal.get(Calendar.HOUR)
@@ -196,14 +217,19 @@ private fun getGreetingMessage(): String {
         amPm == Calendar.AM && hour12 in 5..11 -> "Good morning"
         amPm == Calendar.PM && hour12 in 0..4  -> "Good afternoon"
         amPm == Calendar.PM && hour12 in 5..10 -> "Good evening"
-        else -> "Good night"
+        else -> "Hello"
     }
 }
 
-// -----------------------------------------------------------------------------
-// DASHBOARD CARD COMPOSABLES
-// -----------------------------------------------------------------------------
-
+/**
+ * Card displaying the **current NOAA Kp Index**, including a numeric value and
+ * descriptive severity. Tapping the card navigates to the full Kp Index screen.
+ *
+ * @param readings Recent Kp readings loaded from Room.
+ * @param vm ViewModel used to compute the most accurate Kp value.
+ * @param cardShape Card corner rounding for consistent styling.
+ * @param navController Navigation controller for deeper Kp details.
+ */
 @Composable
 private fun KpCard(
     readings: List<com.example.celestia.data.model.KpReading>,
@@ -213,7 +239,6 @@ private fun KpCard(
 ) {
     val latest = vm.getLatestValidKp(readings)
     val kp = latest?.estimatedKp ?: 0.0
-
     val (status, color) = FormatUtils.getNoaaKpStatusAndColor(kp)
 
     CelestiaCard(
@@ -224,15 +249,13 @@ private fun KpCard(
             Text(
                 text = kp.toString(),
                 modifier = Modifier.alignByBaseline(),
-                style = MaterialTheme.typography.displayMedium.copy(
-                    color = color
-                )
+                style = MaterialTheme.typography.displayMedium.copy(color = color)
             )
             Text(
                 text = status,
                 modifier = Modifier.alignByBaseline(),
                 style = MaterialTheme.typography.titleMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
@@ -242,6 +265,14 @@ private fun KpCard(
     )
 }
 
+/**
+ * Card presenting the **current International Space Station (ISS) position**, including
+ * formatted latitude/longitude and basic orbital metadata such as altitude and velocity.
+ *
+ * @param issReading Current ISS reading or `null` if data is unavailable.
+ * @param cardShape Rounded card surface styling.
+ * @param navController Used to navigate into the ISS detail screen.
+ */
 @Composable
 private fun IssCard(
     issReading: com.example.celestia.data.model.IssReading?,
@@ -257,9 +288,7 @@ private fun IssCard(
                 painter = painterResource(id = R.drawable.ic_map_pin),
                 contentDescription = "Map Pin",
                 tint = CelestiaPurple,
-                modifier = Modifier
-                    .size(18.dp)
-                    .alignByBaseline()
+                modifier = Modifier.size(18.dp).alignByBaseline()
             )
             Text(
                 text = issReading?.let {
@@ -279,6 +308,18 @@ private fun IssCard(
     )
 }
 
+/**
+ * Card summarizing **asteroid approach data**, showing either:
+ * - A featured asteroid for the current day, or
+ * - The next predicted close-approach asteroid.
+ *
+ * Tapping the card opens the full asteroid tracking screen.
+ *
+ * @param featuredAsteroid Asteroid ranked as most significant today.
+ * @param nextAsteroid Soonest upcoming asteroid approach.
+ * @param cardShape Card styling.
+ * @param navController Navigation controller for asteroid details.
+ */
 @Composable
 private fun AsteroidCard(
     featuredAsteroid: com.example.celestia.data.model.AsteroidApproach?,
@@ -286,6 +327,8 @@ private fun AsteroidCard(
     cardShape: RoundedCornerShape,
     navController: NavController
 ) {
+    val primaryAsteroid = featuredAsteroid ?: nextAsteroid
+
     CelestiaCard(
         iconRes = R.drawable.ic_asteroid,
         iconTint = CelestiaOrange,
@@ -295,12 +338,10 @@ private fun AsteroidCard(
                 painter = painterResource(id = R.drawable.ic_calendar),
                 contentDescription = "Asteroid Calendar",
                 tint = CelestiaOrange,
-                modifier = Modifier
-                    .size(18.dp)
-                    .alignByBaseline()
+                modifier = Modifier.size(18.dp).alignByBaseline()
             )
             Text(
-                text = featuredAsteroid?.name ?: "No data",
+                text = primaryAsteroid?.name ?: "No data",
                 modifier = Modifier.alignByBaseline(),
                 style = MaterialTheme.typography.titleMedium.copy(
                     color = MaterialTheme.colorScheme.onSurface
@@ -308,16 +349,26 @@ private fun AsteroidCard(
             )
         },
         description =
-            nextAsteroid?.let {
-                val date = it.approachDate
-                val distance = String.format("%.3f AU", it.missDistanceAu)
-                "Approach: $date | $distance"
+            primaryAsteroid?.let { asteroid ->
+                val date = asteroid.approachDate
+                val distance = String.format("%.3f AU", asteroid.missDistanceAu)
+                val avgDiameter =
+                    ((asteroid.diameterMinMeters + asteroid.diameterMaxMeters) / 2).toInt()
+                "Approach: $date | $distance | Size: ~${avgDiameter} m"
             } ?: "Tap Reload to fetch asteroid data.",
         shape = cardShape,
         onClick = { navController.navigate("asteroid_tracking") }
     )
 }
 
+/**
+ * Card showing current **moon phase**, illumination percentage, and lunar age.
+ * Uses [LunarHelper] to derive illumination and moon age.
+ *
+ * @param lunarPhase Live lunar metadata from the repository.
+ * @param cardShape Rounded card shape.
+ * @param navController Navigation controller for the detailed lunar phase screen.
+ */
 @Composable
 private fun LunarCard(
     lunarPhase: com.example.celestia.data.model.LunarPhaseEntity?,
@@ -330,15 +381,13 @@ private fun LunarCard(
     CelestiaCard(
         iconRes = R.drawable.ic_moon,
         iconTint = CelestiaYellow,
-        title = "Lunar Phase",
+        title = "Moon Phase",
         mainRow = {
             Icon(
                 painter = painterResource(id = R.drawable.ic_full_moon),
                 contentDescription = "Lunar Icon",
                 tint = CelestiaYellow,
-                modifier = Modifier
-                    .size(18.dp)
-                    .alignByBaseline()
+                modifier = Modifier.size(18.dp).alignByBaseline()
             )
             Text(
                 text = LunarHelper.formatMoonPhaseName(lunarPhase?.moonPhase ?: "Loading..."),
@@ -358,9 +407,80 @@ private fun LunarCard(
     )
 }
 
-// -----------------------------------------------------------------------------
-// ORIGINAL CelestiaCard
-// -----------------------------------------------------------------------------
+/**
+ * Card representing the **Observation Journal** module. Shows:
+ * - A quick preview of the user's most recent journal entry
+ * - A date summary
+ * - A fallback message when no entries exist
+ *
+ * @param cardShape Shape applied to the card surface.
+ * @param navController Navigation controller for history screen.
+ * @param vm ViewModel exposing journal entry data.
+ */
+@Composable
+private fun ObservationNotesCard(
+    cardShape: RoundedCornerShape,
+    navController: NavController,
+    vm: CelestiaViewModel
+) {
+    val entries by vm.allJournalEntries.observeAsState(emptyList())
+    val latest = entries.maxByOrNull { it.timestamp }
+
+    val latestDateText = if (latest != null) {
+        val formatter = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+        formatter.format(java.util.Date(latest.timestamp))
+    } else "No entries yet"
+
+    val descriptionText = if (latest != null) {
+        "Last observation: ${latest.observationTitle.ifBlank { "Untitled" }}"
+    } else {
+        "Start a new observation"
+    }
+
+    CelestiaCard(
+        iconRes = R.drawable.ic_book,
+        iconTint = CelestiaGreen,
+        title = "Observation Journal",
+        mainRow = {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_pencil),
+                contentDescription = "Viewing Icon",
+                tint = CelestiaGreen,
+                modifier = Modifier.size(18.dp).alignByBaseline()
+            )
+            Text(
+                text = latestDateText,
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        description = descriptionText,
+        shape = cardShape,
+        onClick = { navController.navigate("observation_history") }
+    )
+}
+
+/**
+ * **Generic Celestia dashboard card** used throughout the app.
+ *
+ * Provides a consistent elevated Card layout containing:
+ * - A section icon
+ * - A section title
+ * - A customizable main data row
+ * - A one-line description
+ *
+ * Cards are tappable when an [onClick] callback is provided.
+ *
+ * @param iconRes Resource ID for the leading icon.
+ * @param iconTint Tint applied to the icon.
+ * @param title Section title text.
+ * @param mainRow Composable content representing the main summary row.
+ * @param description Supporting metadata shown beneath the main row.
+ * @param shape Card shape (rounded corners).
+ * @param onClick Optional callback invoked when the card is tapped.
+ */
 @Composable
 fun CelestiaCard(
     iconRes: Int,

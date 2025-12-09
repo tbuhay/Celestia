@@ -1,254 +1,213 @@
-🌌 Celestia
+# 🌌 Celestia
+#### An Android app built with Kotlin + Jetpack Compose
 
-An Android app built with Kotlin + Jetpack Compose
+**Celestia is an Android application that brings space weather, orbital data, and astronomical insights together in one elegant dashboard.**
 
-Celestia is a student-built Android application that brings space weather, Earth-orbit details, and astronomical insights together in one clean dashboard. It provides real-time geomagnetic activity (Kp Index), live ISS tracking, lunar phase data, and upcoming asteroid approaches — all powered by modern Android technologies such as Jetpack Compose, MVVM, Room, Retrofit, Firebase, and Google Maps.
+**It provides real-time geomagnetic activity (Kp Index), ISS tracking, lunar phase data, and asteroid information, powered by modern Android technologies such as Jetpack Compose, MVVM, Room, Retrofit, Firebase Authentication, and Google Maps.**
 
-This project was built as part of an ongoing learning journey into Android development, clean architecture, API integration, and UI/UX principles.
+**This project was created as part of an ongoing learning journey into Android development, clean architecture, API integration, and UI/UX design.**
 
-✨ Features
-🏠 Dashboard
+## ✨ Features
+#### 🏠 Dashboard
+##### A single screen showing:
+1. Current Kp Index (geomagnetic activity level)
+2. Real-time ISS location (coordinates, altitude, velocity)
+3. Current lunar phase (illumination %, age, moonrise/moonset)
+4. Featured asteroid (next close approach + hazard status)
 
-A single screen showing:
+#### 📈 Kp Index Screen
+1. Hour-by-hour geomagnetic readings
+2. Grouped by day for readability
+3. Color-coded status labels (e.g., Active, Minor Storm, etc.)
 
-Current Kp Index (geomagnetic activity level)
+#### 🛰️ ISS Location Screen
+1. Live ISS coordinates, altitude, and speed
+2. Google Maps Compose marker that updates in real-time
+3. Number of astronauts currently onboard
 
-Real-time ISS location (coordinates, altitude, velocity)
+#### 🌙 Lunar Phase Screen
+1. Current phase, illumination %, age
+2. Moonrise & moonset
+3. Upcoming major phases (New Moon → Full Moon)
 
-Current lunar phase (illumination %, age, moonrise/moonset)
+#### ☄️ Asteroid Tracking Screen
+1. NASA NEO asteroid data
+2. Hazard classification
+3. Miss distance, relative speed, orbit details
+4. Next close approach
 
-Featured asteroid (next close approach + hazard status)
+#### ⚙️ Settings Screen
+1. Dark Mode toggle
+2. 12h / 24h time format
+3. Refresh on launch
+4. Device location toggle
+5. Firebase Sign-Out
 
-📈 Kp Index Screen
+## 🛠️ Tech Stack
+#### Languages & UI
+- Kotlin
+- Jetpack Compose
+- Coroutines + Flow
 
-Hour-by-hour geomagnetic readings
+#### Architecture
+- MVVM
+- Repository Pattern
+- Clean modular structure
+- Local & Remote Data
+- Room Database
+- DataStore Preferences
+- Retrofit Networking
+- Firebase Authentication
+- Google Maps Compose
 
-Grouped by day for easier reading
+#### Utilities
+- FormatUtils.kt (number/time/coordinate formatting)
+- TimeUtils.kt (cross-API-level time parsing & formatting)
 
-Includes color status levels (e.g., “Active”, “Minor Storm”, etc.)
+## 🏗 Architecture Overview
 
-🛰 ISS Location Screen
+**Celestia uses a clean, layered architecture to keep the codebase maintainable:**
 
-Live ISS coordinates, altitude, and speed
-
-Google Maps Compose marker tracking the station’s position
-
-Shows number of astronauts currently onboard
-
-🌙 Lunar Phase Screen
-
-Current phase, illumination, age, moonrise, and moonset
-
-List of upcoming major phases (New Moon → Full Moon)
-
-☄️ Asteroid Tracking Screen
-
-Displays NASA NEO asteroid data
-
-Highlights hazardous asteroids
-
-Next close approach, velocity, miss distance, orbit details
-
-⚙️ Settings Screen
-
-Dark Mode toggle
-
-12h/24h time format
-
-Refresh on launch
-
-Device location permission toggle
-
-Firebase Sign-Out
-
-🛠 Tech Stack
-Languages & Frameworks
-
-Kotlin
-
-Jetpack Compose
-
-Coroutines + Flow
-
-Architecture & Data
-
-MVVM + Repository Pattern
-
-Room Database
-
-DataStore Preferences
-
-Networking & APIs
-
-Retrofit (NASA NEO, NOAA Kp Index, ISS API, Lunar API)
-
-Google Maps Compose
-
-Firebase Authentication
-
-Other Tools
-
-Live data formatting utilities (FormatUtils.kt, TimeUtils.kt)
-
-Modular package organization
-
-🏗 Architecture Overview (Beginner-Friendly)
-
-Celestia uses a clean, layered architecture to keep code maintainable:
-
-UI (Screens)  
-↓  
-ViewModels  
-↓  
-Repository  
-↓  
+```
+UI (Compose Screens)
+         ↓
+     ViewModels
+         ↓
+     Repository
+         ↓
 Room DB + Retrofit APIs
+```
 
+#### Roles:
 
-UI (Compose Screens): Displays data
+**UI:** Displays data released by ViewModels
+**ViewModels:** Holds UI state + business logic
+**Repositories:** Single source of truth
+**Room:** Caches data for offline use
+**Retrofit:** Fetches data from remote APIs
+**DataStore:** Persists user preferences
 
-ViewModels: Holds state + business logic
-
-Repositories: Single source of truth
-
-Room: Caches data for offline use
-
-Retrofit: Fetches remote API data
-
-DataStore: Saves user settings
-
-This structure keeps the app organized, testable, and easy to expand.
-
-📁 Project Structure
+### 📁 Project Structure
+```
 com.example.celestia/
 │
 ├── data/
-│   ├── db/              // Room database + DAOs
-│   ├── model/           // Data classes
-│   ├── repository/      // Repositories for each feature
+│   ├── db/              # Room database + DAOs
+│   ├── model/           # Data classes
+│   ├── repository/      # Repository layer
 │
 ├── ui/
-│   ├── screens/         // Compose screens (Dashboard, ISS, etc.)
-│   ├── viewmodel/       // ViewModels
+│   ├── screens/         # Compose screens for each feature
+│   ├── viewmodel/       # ViewModels
 │
-└── utils/               // FormatUtils, TimeUtils, helpers
+└── utils/               # FormatUtils, TimeUtils, helpers
+```
 
+**This is a high-level overview — files are grouped by feature and responsibility.**
 
-This is a high-level overview — files are grouped by feature and responsibility.
+### ▶️ How to Run the Project
+**Requirements**
 
-▶️ How to Run the Project
-Requirements
+- Android Studio Ladybug or newer
+- Android SDK 24+
+- Google Maps API Key
+- Firebase project
+- Internet connection
 
-Android Studio Ladybug or newer
+**1. Clone the Project**
+git clone https://github.com/tbuhay/celestia.git
 
-Android SDK 24+
+```
+cd celestia
+```
 
-Google Maps API key
+**2. Open in Android Studio**
+- File → Open → Select the project folder
 
-Firebase project for Authentication
+- Allow Gradle to sync.
 
-Internet connection (APIs require network)
+**3. Add API Keys**
 
-1. Clone the project
-   git clone https://github.com/your-username/celestia.git
-   cd celestia
+Depending on your setup, you may need the following:
 
-2. Open in Android Studio
+- Service	Key Location
+- NASA NEO	local.properties or BuildConfig
+- Lunar API (IPGeolocation)	BuildConfig or secure key file
+- Google Maps	local.properties → MAPS_API_KEY="your_key"
+- Firebase	app/google-services.json
 
-File → Open
+**Example (local.properties):**
 
-Select the project folder
-
-Let Gradle sync
-
-3. Add API Keys
-
-Depending on your API configuration, you may need:
-
-Service	Key Location
-NASA NEO	local.properties or BuildConfig field
-IPGeolocation (lunar API)	BuildConfig or secure key file
-Google Maps	local.properties → MAPS_API_KEY="your_key"
-Firebase	Place google-services.json in /app
-
-Example using local.properties:
-
+```
 NASA_API_KEY=your_key_here
 LUNAR_API_KEY=your_key_here
 MAPS_API_KEY=your_key_here
+```
 
+### 4. Run on Emulator or Device
+- Select a Pixel emulator or plug in a physical device
+- Press Run ▶️
 
-And load them using BuildConfig or your preferred approach.
+### 🔧 Versioning & Branch Workflow
 
-4. Run on device/emulator
+Celestia uses a simple Git workflow:
 
-Choose Pixel emulator or physical device
+1. main — stable, release-ready
 
-Click Run ▶ in Android Studio
+2. development — active updates
 
-🔧 Versioning & Branch Workflow
+3. Feature branches as needed (kp_refactor, ui-polish, etc.)
 
-Celestia uses a simple and clean Git workflow:
+**Releases tagged:**
 
-main branch – stable, release-ready
+| Version | Focus Status |
+|:-------|:----------------------:|
+| v1.0.0 | Initial release|
+| v1.0.1 | Patches/UI improvements|
+| v1.0.2 | Accessibility improvments |
 
-development branch – active work
+This mirrors real-world portfolio-ready structure.
 
-Feature branches optional (ex: kp_refactor, ui-polish)
+### 🌟 Future Improvements (Ideas)
 
-Releases tagged as:
+| Concept | Priority |
+|:--------|:---------|
+| Widget support (Kp Index, Moon Phase) | Low |
+| Geomagnetic storm alerts | High
+| ISS pass predictions | Low |
+| Improved offline caching | Medium |
+| Dynamic Material You theming | Low |
+| Astronaut profiles (Wikipedia API) | Medium |
+| Onboarding tutorial | High |
 
-v1.0.0 (initial release)
+### 📡 Data Sources & Credits
 
-v1.0.1 (patches, UI improvements)
+Celestia uses publicly available scientific data:
 
-This mirrors a real-world development workflow in a portfolio-friendly way.
+1. NOAA — Kp Index & space weather
+2. NASA NEO API — asteroid approaches
+3. Open Notify — ISS location & crew
+4. IPGeolocation — lunar phase & rise/set
+5. Google Maps Platform
 
-🌟 Future Improvements (Ideas)
+Huge thanks to these organizations for providing open-access data!
 
-Widget support (Kp Index, Moon Phase)
+### 🙌 Final Notes
+**Celestia is a learning-driven project built to explore:**
+- Real Android development patterns
+- Jetpack Compose UI
+- API integration
+- Clean architecture
+- Offline caching strategies
+- Firebase Auth
+- Google Maps integration
 
-Alerts for geomagnetic storms
+The goal is clarity, maintainability, and real-time space data visualized in a clean and simple way.
 
-ISS pass predictions for user location
+If you’re reviewing this project for a portfolio or academic evaluation — thank you!
 
-Offline caching improvements
+### 📦 Download APK
+➡️ **You can download the latest Celestia build here:**
+https://drive.google.com/file/d/1xMT3SFIMMMmiuCKojGqnbNyKJc5_XvZ1/view?usp=sharing
 
-Theming improvements (dynamic colors)
-
-Astronaut profiles from Wikipedia API
-
-Onboarding tutorial screen
-
-📡 Data Sources & Credits
-
-Celestia uses publicly available scientific data from:
-
-NOAA – Kp Index & space weather
-
-NASA NEO API – asteroid close approaches
-
-Open Notify / ISS API – ISS location & crew
-
-IPGeolocation – lunar phase & rise/set times
-
-Google Maps Platform
-
-Big thanks to these organizations for providing free, open data.
-
-📄 License (Optional)
-
-If you want a permissive open-use license:
-
-MIT License
-Copyright (c) 2025
-Permission is hereby granted, free of charge, to any person obtaining a copy...
-
-
-Or leave the project unlicensed for now — your choice.
-
-🙌 Final Notes
-
-Celestia is a learning-driven project built to practice real Android development patterns, Jetpack Compose UI, API integration, and clean architecture. The goal is clarity, maintainability, and real-time space data visualized in a simple way.
-
-If you're reviewing this project for a portfolio or academic context, thank you!
+*(You may need to enable "Install unknown apps" on your device.)*

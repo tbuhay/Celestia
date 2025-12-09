@@ -1,6 +1,7 @@
 package com.example.celestia.utils
 
 import android.os.Build
+import androidx.annotation.RequiresApi
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
@@ -55,6 +56,7 @@ object TimeUtils {
      * @param value The raw timestamp string.
      * @return A parsed Instant or null if all strategies fail.
      */
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun parseInstant(value: String): Instant? {
         try {
             return Instant.parse(value)
@@ -121,6 +123,7 @@ object TimeUtils {
      * @param instant The Instant to format.
      * @return A formatted timestamp string.
      */
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun formatInstant(instant: Instant): String {
         val zone = ZoneId.systemDefault()
         val fmt = DateTimeFormatter.ofPattern("MMM dd, HH:mm", Locale.US)

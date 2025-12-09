@@ -8,20 +8,63 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.celestia.R
 
-// Custom font families
+/**
+ * ---------------------------------------------------------------------------
+ * Celestia Typography System
+ * ---------------------------------------------------------------------------
+ *
+ * Defines the full text hierarchy for the Celestia app, including:
+ * - Screen titles
+ * - Section/card titles
+ * - Metric values (Kp, ISS velocity, lunar illumination, etc.)
+ * - Body text
+ * - Labels & metadata
+ *
+ * The system uses two font families:
+ *
+ * **Inter** — for headings, titles, and emphasized text
+ * **Roboto** — for body paragraphs and supporting labels
+ *
+ * All sizes were tuned specifically for:
+ * - High readability over dark space-themed surfaces
+ * - Clean UI presentation on small and large Android screens
+ * - Compatibility with the dynamic text scaling system found in `CelestiaTheme`
+ */
+
+// ---------------------------------------------------------------------------
+// Font Families
+// ---------------------------------------------------------------------------
+
+/**
+ * Inter Variable — primary display font for Celestia.
+ * Used for titles, headings, KP/ISS values, and important content.
+ */
 val Inter = FontFamily(
     Font(R.font.inter_variable)
 )
 
+/**
+ * Roboto — default body font.
+ * Chosen for excellent readability and Material compatibility.
+ */
 val Roboto = FontFamily.Default
 
-// -----------------------------------------------------
-// Celestia Typography System (Finalized)
-// -----------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Celestia Typography Tokens
+// ---------------------------------------------------------------------------
+
+/**
+ * The main typography configuration for all Material components.
+ *
+ * These values define the baseline text sizes before accessibility scaling
+ * is applied via `CelestiaTheme(textSize = ...)`.
+ */
 val CelestiaTypography = Typography(
 
     /* -------------------------------------------------
-     * SCREEN TITLES (Large, bold — your 32.sp style)
+     * SCREEN TITLES (Large, bold — 32sp)
+     * Used in: Home top bar title, screen headers
      * ------------------------------------------------- */
     headlineLarge = TextStyle(
         fontFamily = Inter,
@@ -31,7 +74,8 @@ val CelestiaTypography = Typography(
     ),
 
     /* -------------------------------------------------
-     * SECTION & CARD TITLES (your 18–20.sp style)
+     * SECTION & CARD TITLES (18–22sp)
+     * Used in: cards like ISS, Kp Index, Asteroid, Lunar
      * ------------------------------------------------- */
     titleLarge = TextStyle(
         fontFamily = Inter,
@@ -48,8 +92,9 @@ val CelestiaTypography = Typography(
     ),
 
     /* -------------------------------------------------
-     * METRIC VALUES (your KP/ISS value style)
-     * for large numbers: 24–26.sp
+     * METRIC VALUES (24–26sp)
+     * Used for: Kp index value, ISS altitude/velocity,
+     *           asteroid distances, moon illumination %, etc.
      * ------------------------------------------------- */
     displayMedium = TextStyle(
         fontFamily = Inter,
@@ -59,7 +104,8 @@ val CelestiaTypography = Typography(
     ),
 
     /* -------------------------------------------------
-     * BODY / DESCRIPTION TEXT (14.sp)
+     * BODY TEXT (14–16sp)
+     * Used for descriptions, paragraphs, and explanatory text.
      * ------------------------------------------------- */
     bodyLarge = TextStyle(
         fontFamily = Roboto,
@@ -83,7 +129,7 @@ val CelestiaTypography = Typography(
     ),
 
     /* -------------------------------------------------
-     * LABELS (small metadata)
+     * LABELS (metadata, timestamps, subtext)
      * ------------------------------------------------- */
     labelSmall = TextStyle(
         fontFamily = Roboto,
